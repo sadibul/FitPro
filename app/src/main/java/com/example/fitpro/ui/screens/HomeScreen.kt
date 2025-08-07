@@ -14,10 +14,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.example.fitpro.data.UserProfile
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 
 @Composable
@@ -58,6 +60,11 @@ fun HomeScreen(
             category = userProfile?.getBMICategory() ?: "Unknown",
             onClick = onBMICardClick
         )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Health Tips Section
+        HealthTipsCard()
     }
 }
 
@@ -225,6 +232,69 @@ private fun BMICard(bmi: Float, category: String, onClick: () -> Unit) {
                 text = category,
                 style = MaterialTheme.typography.bodyLarge
             )
+        }
+    }
+}
+
+@Composable
+fun HealthTipsCard() {
+    val healthTips = listOf(
+        "💧 Drink at least 8 glasses of water daily for optimal hydration",
+        "🥗 Include colorful vegetables in every meal for better nutrition",
+        "🚶‍♀️ Take a 10-minute walk after meals to improve digestion",
+        "😴 Aim for 7-9 hours of quality sleep each night",
+        "🧘‍♂️ Practice deep breathing for 5 minutes daily to reduce stress",
+        "🥛 Include protein in every meal to maintain muscle mass",
+        "☀️ Get 15 minutes of sunlight daily for vitamin D",
+        "🏃‍♂️ Take stairs instead of elevators when possible",
+        "🥜 Eat a handful of nuts daily for healthy fats",
+        "📱 Take breaks from screens every 20 minutes"
+    )
+    
+    var currentTipIndex by remember { mutableStateOf(0) }
+    
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(4000) // Change tip every 4 seconds
+            currentTipIndex = (currentTipIndex + 1) % healthTips.size
+        }
+    }
+    
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(100.dp)
+            .shadow(4.dp, RoundedCornerShape(12.dp)),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+        ),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Lightbulb,
+                    contentDescription = "Health Tip",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    text = healthTips[currentTipIndex],
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.weight(1f),
+                    textAlign = TextAlign.Start
+                )
+            }
         }
     }
 }
