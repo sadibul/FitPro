@@ -1,5 +1,8 @@
 package com.example.fitpro.ui.screens
 
+import android.content.Intent
+import android.net.Uri
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -10,9 +13,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -65,6 +71,15 @@ fun HomeScreen(
 
         // Health Tips Section
         HealthTipsCard()
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        // Medical Assistance Card - takes remaining space
+        MedicalAssistanceCard(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f) // This will take all remaining space
+        )
     }
 }
 
@@ -295,6 +310,96 @@ fun HealthTipsCard() {
                     textAlign = TextAlign.Start
                 )
             }
+        }
+    }
+}
+
+@Composable
+fun MedicalAssistanceCard(modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    
+    Card(
+        modifier = modifier
+            .clickable {
+                // Open Google Maps to search for hospitals/consultancy
+                val intent = Intent(Intent.ACTION_VIEW).apply {
+                    data = Uri.parse("geo:0,0?q=hospitals+near+me")
+                    setPackage("com.google.android.apps.maps")
+                }
+                
+                // If Google Maps is not installed, use generic intent
+                try {
+                    context.startActivity(intent)
+                } catch (e: Exception) {
+                    val genericIntent = Intent(Intent.ACTION_VIEW).apply {
+                        data = Uri.parse("geo:0,0?q=hospitals+near+me")
+                    }
+                    context.startActivity(genericIntent)
+                }
+            },
+        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.error.copy(alpha = 0.1f)
+        ),
+        border = BorderStroke(
+            width = 2.dp,
+            color = MaterialTheme.colorScheme.error.copy(alpha = 0.3f)
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.LocalHospital,
+                contentDescription = "Medical Assistance",
+                modifier = Modifier.size(64.dp),
+                tint = MaterialTheme.colorScheme.error
+            )
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            Text(
+                text = "Medical Assistance",
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.error,
+                textAlign = TextAlign.Center
+            )
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            Text(
+                text = "Find nearby hospitals, clinics, and medical consultancies",
+                style = MaterialTheme.typography.bodyMedium,
+                textAlign = TextAlign.Center,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+            )
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            Text(
+                text = "Tap to open in Maps",
+                style = MaterialTheme.typography.bodySmall,
+                textAlign = TextAlign.Center,
+                color = MaterialTheme.colorScheme.error.copy(alpha = 0.8f),
+                fontStyle = FontStyle.Italic
+            )
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            // Visual indicator
+            Icon(
+                imageVector = Icons.Default.TouchApp,
+                contentDescription = "Tap indicator",
+                modifier = Modifier
+                    .size(24.dp)
+                    .alpha(0.6f),
+                tint = MaterialTheme.colorScheme.error
+            )
         }
     }
 }
