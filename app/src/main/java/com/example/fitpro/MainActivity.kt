@@ -5,15 +5,19 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Box
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavController
+import kotlinx.coroutines.launch
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
@@ -46,22 +50,13 @@ class MainActivity : ComponentActivity() {
         val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
 
-        val database = AppDatabase.getDatabase(this)
-        val userDao = database.userDao()
-        val workoutPlanDao = database.workoutPlanDao()
-        val mealPlanDao = database.mealPlanDao()
-
         setContent {
             FitProTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    FitProApp(
-                        userDao = userDao,
-                        workoutPlanDao = workoutPlanDao,
-                        mealPlanDao = mealPlanDao
-                    )
+                    FitProApp()
                 }
             }
         }
@@ -69,28 +64,68 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun FitProApp(
-    userDao: UserDao,
-    workoutPlanDao: WorkoutPlanDao,
-    mealPlanDao: MealPlanDao
-) {
+fun FitProApp() {
+    val context = androidx.compose.ui.platform.LocalContext.current
     val navController = rememberNavController()
-    val userProfileFlow = remember { userDao.getUserProfile() }
+    
+    var userDao by remember { mutableStateOf<UserDao?>(null) }
+    var workoutPlanDao by remember { mutableStateOf<WorkoutPlanDao?>(null) }
+    var mealPlanDao by remember { mutableStateOf<MealPlanDao?>(null) }
     var isLoggedIn by remember { mutableStateOf(false) }
+    var isLoading by remember { mutableStateOf(true) }
 
-    if (isLoggedIn) {
-        MainAppWithBottomNav(
-            userDao = userDao,
-            workoutPlanDao = workoutPlanDao,
-            mealPlanDao = mealPlanDao,
-            userProfileFlow = userProfileFlow
-        )
-    } else {
-        AuthNavigation(
-            navController = navController,
-            userDao = userDao,
-            onLoginSuccess = { isLoggedIn = true }
-        )
+    // Initialize database asynchronously
+    LaunchedEffect(Unit) {
+        try {
+            val database = AppDatabase.getDatabase(context)
+            userDao = database.userDao()
+            workoutPlanDao = database.workoutPlanDao()
+            mealPlanDao = database.mealPlanDao()
+        } catch (e: Exception) {
+            // Handle database initialization error
+            e.printStackTrace()
+        } finally {
+            isLoading = false
+        }
+    }
+
+    when {
+        isLoading -> {
+            // Show loading screen
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
+            }
+        }
+        userDao != null && workoutPlanDao != null && mealPlanDao != null -> {
+            val userProfileFlow = remember { userDao!!.getUserProfile() }
+            
+            if (isLoggedIn) {
+                MainAppWithBottomNav(
+                    userDao = userDao!!,
+                    workoutPlanDao = workoutPlanDao!!,
+                    mealPlanDao = mealPlanDao!!,
+                    userProfileFlow = userProfileFlow
+                )
+            } else {
+                AuthNavigation(
+                    navController = navController,
+                    userDao = userDao!!,
+                    onLoginSuccess = { isLoggedIn = true }
+                )
+            }
+        }
+        else -> {
+            // Show error screen
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("Failed to initialize database")
+            }
+        }
     }
 }
 
