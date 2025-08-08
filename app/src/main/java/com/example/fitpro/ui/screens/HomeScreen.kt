@@ -321,9 +321,10 @@ fun MedicalAssistanceCard(modifier: Modifier = Modifier) {
     Card(
         modifier = modifier
             .clickable {
-                // Open Google Maps to search for hospitals/consultancy
+                // Open Google Maps focused on Dhaka, Bangladesh to search for hospitals/consultancy
                 val intent = Intent(Intent.ACTION_VIEW).apply {
-                    data = Uri.parse("geo:0,0?q=hospitals+near+me")
+                    // Dhaka coordinates: 23.8103, 90.4125
+                    data = Uri.parse("geo:23.8103,90.4125?q=hospitals+clinics+medical+consultancy+in+dhaka+bangladesh&z=12")
                     setPackage("com.google.android.apps.maps")
                 }
                 
@@ -332,7 +333,7 @@ fun MedicalAssistanceCard(modifier: Modifier = Modifier) {
                     context.startActivity(intent)
                 } catch (e: Exception) {
                     val genericIntent = Intent(Intent.ACTION_VIEW).apply {
-                        data = Uri.parse("geo:0,0?q=hospitals+near+me")
+                        data = Uri.parse("geo:23.8103,90.4125?q=hospitals+clinics+medical+consultancy+in+dhaka+bangladesh&z=12")
                     }
                     context.startActivity(genericIntent)
                 }
@@ -363,7 +364,7 @@ fun MedicalAssistanceCard(modifier: Modifier = Modifier) {
             Spacer(modifier = Modifier.height(16.dp))
             
             Text(
-                text = "Medical Assistance",
+                text = "Medical Assistance - Dhaka",
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.error,
@@ -373,7 +374,7 @@ fun MedicalAssistanceCard(modifier: Modifier = Modifier) {
             Spacer(modifier = Modifier.height(8.dp))
             
             Text(
-                text = "Find nearby hospitals, clinics, and medical consultancies",
+                text = "Find nearby hospitals, clinics, and medical consultancies in Dhaka, Bangladesh",
                 style = MaterialTheme.typography.bodyMedium,
                 textAlign = TextAlign.Center,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
