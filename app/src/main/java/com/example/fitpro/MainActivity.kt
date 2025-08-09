@@ -53,6 +53,12 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
+        
+        // Keep splash screen longer
+        splashScreen.setKeepOnScreenCondition { 
+            // Keep splash for at least 1 second
+            false 
+        }
 
         setContent {
             FitProTheme {
@@ -79,19 +85,23 @@ fun FitProApp() {
     var isLoggedIn by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(true) }
 
-    // Initialize database asynchronously
+    // Initialize database asynchronously in background thread
     LaunchedEffect(Unit) {
-        try {
-            val database = AppDatabase.getDatabase(context)
-            userDao = database.userDao()
-            workoutPlanDao = database.workoutPlanDao()
-            mealPlanDao = database.mealPlanDao()
-            stepCounterManager = StepCounterManager(context)
-        } catch (e: Exception) {
-            // Handle database initialization error
-            e.printStackTrace()
-        } finally {
-            isLoading = false
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                val database = AppDatabase.getDatabase(context)
+                userDao = database.userDao()
+                workoutPlanDao = database.workoutPlanDao()
+                mealPlanDao = database.mealPlanDao()
+                stepCounterManager = StepCounterManager(context)
+            } catch (e: Exception) {
+                // Handle database initialization error
+                e.printStackTrace()
+            } finally {
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    isLoading = false
+                }
+            }
         }
     }
 
@@ -108,6 +118,7 @@ fun FitProApp() {
         userDao != null && workoutPlanDao != null && mealPlanDao != null && stepCounterManager != null -> {
             val userSession = remember { UserSession(context) }
             val currentUserEmail = userSession.getCurrentUserEmail()
+            val shouldRememberUser = userSession.shouldRememberUser()
             val userProfileFlow = remember(currentUserEmail) { 
                 if (currentUserEmail != null) {
                     userDao!!.getUserProfile(currentUserEmail)
@@ -116,7 +127,8 @@ fun FitProApp() {
                 }
             }
             
-            if (isLoggedIn && currentUserEmail != null) {
+            // Show main app if user is logged in and should be remembered
+            if ((isLoggedIn || shouldRememberUser) && currentUserEmail != null) {
                 MainAppWithBottomNav(
                     userDao = userDao!!,
                     workoutPlanDao = workoutPlanDao!!,
@@ -161,6 +173,7 @@ fun AuthNavigation(
         composable(Screen.Login.route) {
             LoginScreen(
                 navController = navController,
+                userSession = userSession,
                 onLoginSuccess = onLoginSuccess
             )
         }

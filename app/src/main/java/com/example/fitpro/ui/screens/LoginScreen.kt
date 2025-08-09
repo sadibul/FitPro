@@ -15,17 +15,21 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.fitpro.Screen
+import com.example.fitpro.utils.UserSession
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginScreen(
     navController: NavController,
+    userSession: UserSession,
     onLoginSuccess: () -> Unit = {}
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var rememberMe by remember { mutableStateOf(false) }
     var showPassword by remember { mutableStateOf(false) }
+    val coroutineScope = rememberCoroutineScope()
 
     Column(
         modifier = Modifier
@@ -112,9 +116,14 @@ fun LoginScreen(
 
         Button(
             onClick = { 
-                // For demo purposes, we'll just call onLoginSuccess
-                // In a real app, you'd validate credentials first
-                onLoginSuccess()
+                coroutineScope.launch {
+                    // For demo purposes, we'll simulate successful login
+                    // In a real app, you'd validate credentials against database first
+                    if (email.isNotBlank() && password.isNotBlank()) {
+                        userSession.saveUserSession(email, rememberMe)
+                        onLoginSuccess()
+                    }
+                }
             },
             enabled = email.isNotBlank() && password.isNotBlank(),
             modifier = Modifier

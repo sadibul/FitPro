@@ -132,8 +132,8 @@ fun QuestionsScreen(
                         )
                         userDao.insertOrUpdateUser(userProfile)
                         
-                        // Save user session
-                        userSession.saveUserSession(userEmail)
+                        // Save user session with remember me enabled for new users
+                        userSession.saveUserSession(userEmail, true)
                         
                         onQuestionsComplete()
                     } catch (e: Exception) {

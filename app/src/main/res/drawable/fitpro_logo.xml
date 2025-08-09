@@ -1,0 +1,29 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="200dp"
+    android:height="80dp"
+    android:viewportWidth="200"
+    android:viewportHeight="80">
+    
+    <!-- FitPro logo text -->
+    <group>
+        <!-- "fit" in green gradient -->
+        <path
+            android:fillColor="#8BC34A"
+            android:pathData="M20,20 Q20,15 25,15 L35,15 Q40,15 40,20 L40,60 Q40,65 35,65 L25,65 Q20,65 20,60 Z" />
+        
+        <!-- "pro" in blue gradient -->
+        <path
+            android:fillColor="#2196F3"
+            android:pathData="M120,20 Q120,15 125,15 L135,15 Q140,15 140,20 L140,60 Q140,65 135,65 L125,65 Q120,65 120,60 Z" />
+        
+        <!-- Leaf decoration -->
+        <path
+            android:fillColor="#4CAF50"
+            android:pathData="M80,10 Q85,5 90,10 Q95,15 90,20 Q85,25 80,20 Q75,15 80,10 Z" />
+        
+        <!-- Water drop -->
+        <path
+            android:fillColor="#03A9F4"
+            android:pathData="M90,55 Q95,50 100,55 Q95,65 90,60 Q85,55 90,55 Z" />
+    </group>
+</vector>
