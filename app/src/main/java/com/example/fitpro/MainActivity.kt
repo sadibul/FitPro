@@ -31,6 +31,7 @@ import com.example.fitpro.data.UserDao
 import com.example.fitpro.data.WorkoutPlanDao
 import com.example.fitpro.ui.screens.*
 import com.example.fitpro.ui.theme.FitProTheme
+import com.example.fitpro.utils.StepCounterManager
 
 sealed class Screen(val route: String) {
     object Login : Screen("login")
@@ -71,6 +72,7 @@ fun FitProApp() {
     var userDao by remember { mutableStateOf<UserDao?>(null) }
     var workoutPlanDao by remember { mutableStateOf<WorkoutPlanDao?>(null) }
     var mealPlanDao by remember { mutableStateOf<MealPlanDao?>(null) }
+    var stepCounterManager by remember { mutableStateOf<StepCounterManager?>(null) }
     var isLoggedIn by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(true) }
 
@@ -81,6 +83,7 @@ fun FitProApp() {
             userDao = database.userDao()
             workoutPlanDao = database.workoutPlanDao()
             mealPlanDao = database.mealPlanDao()
+            stepCounterManager = StepCounterManager(context)
         } catch (e: Exception) {
             // Handle database initialization error
             e.printStackTrace()
@@ -99,7 +102,7 @@ fun FitProApp() {
                 CircularProgressIndicator()
             }
         }
-        userDao != null && workoutPlanDao != null && mealPlanDao != null -> {
+        userDao != null && workoutPlanDao != null && mealPlanDao != null && stepCounterManager != null -> {
             val userProfileFlow = remember { userDao!!.getUserProfile() }
             
             if (isLoggedIn) {
@@ -107,6 +110,7 @@ fun FitProApp() {
                     userDao = userDao!!,
                     workoutPlanDao = workoutPlanDao!!,
                     mealPlanDao = mealPlanDao!!,
+                    stepCounterManager = stepCounterManager!!,
                     userProfileFlow = userProfileFlow
                 )
             } else {
@@ -165,6 +169,7 @@ fun MainAppWithBottomNav(
     userDao: UserDao,
     workoutPlanDao: WorkoutPlanDao,
     mealPlanDao: MealPlanDao,
+    stepCounterManager: StepCounterManager,
     userProfileFlow: kotlinx.coroutines.flow.Flow<com.example.fitpro.data.UserProfile?>
 ) {
     val navController = rememberNavController()
@@ -238,6 +243,8 @@ fun MainAppWithBottomNav(
                 HomeScreen(
                     navController = navController,
                     userProfileFlow = userProfileFlow,
+                    userDao = userDao,
+                    stepCounterManager = stepCounterManager,
                     onBMICardClick = { navController.navigate(Screen.BMIDetails.route) }
                 )
             }

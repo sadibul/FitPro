@@ -6,7 +6,11 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -21,26 +25,54 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.example.fitpro.data.UserProfile
+import com.example.fitpro.data.UserDao
+import com.example.fitpro.utils.StepCounterManager
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     navController: NavController,
     userProfileFlow: Flow<UserProfile?>,
+    userDao: UserDao,
+    stepCounterManager: StepCounterManager,
     onBMICardClick: () -> Unit
 ) {
     val userProfile by userProfileFlow.collectAsStateWithLifecycle(initialValue = null)
+    val scrollState = rememberScrollState()
+    val dailySteps by stepCounterManager.dailySteps.collectAsStateWithLifecycle()
+    val scope = rememberCoroutineScope()
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-    ) {
+    // Start step counting when screen is active and stop when inactive
+    DisposableEffect(Unit) {
+        stepCounterManager.startListening()
+        onDispose {
+            stepCounterManager.stopListening()
+        }
+    }
+
+    // Sync steps with database periodically
+    LaunchedEffect(dailySteps) {
+        scope.launch {
+            userDao.updateSteps(dailySteps)
+        }
+    }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(scrollState)
+                .padding(16.dp)
+        ) {
         // Welcome Section
         WelcomeSection(userProfile?.name ?: "User")
 
@@ -53,9 +85,11 @@ fun HomeScreen(
 
         // Activity Stats Section
         ActivityStatsSection(
-            steps = userProfile?.dailySteps ?: 0,
+            steps = dailySteps,
+            stepTarget = userProfile?.stepTarget ?: 0,
             calories = userProfile?.caloriesBurned ?: 0,
-            heartRate = userProfile?.heartRate ?: 0
+            heartRate = userProfile?.heartRate ?: 0,
+            userDao = userDao
         )
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -73,14 +107,51 @@ fun HomeScreen(
         HealthTipsCard()
         
         Spacer(modifier = Modifier.height(16.dp))
-        
-        // Medical Assistance Card - takes remaining space
+
+        // Medical Assistance Card
         MedicalAssistanceCard(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f) // This will take all remaining space
+            modifier = Modifier.fillMaxWidth()
+        )
+        
+        // Test button for adding steps (for development/testing)
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        Button(
+            onClick = {
+                stepCounterManager.addStepsForTesting(100)
+            },
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.secondary
+            )
+        ) {
+            Text("Add 100 Steps (Test)")
+        }
+        
+        Spacer(modifier = Modifier.height(16.dp))
+    }
+    
+    // Refresh button (floating action button)
+    FloatingActionButton(
+        onClick = {
+            scope.launch {
+                stepCounterManager.stopListening()
+                delay(500)
+                stepCounterManager.startListening()
+            }
+        },
+        modifier = Modifier
+            .align(Alignment.BottomEnd)
+            .padding(16.dp),
+        containerColor = MaterialTheme.colorScheme.primary
+    ) {
+        Icon(
+            Icons.Default.Refresh,
+            contentDescription = "Refresh Step Counter",
+            tint = MaterialTheme.colorScheme.onPrimary
         )
     }
+}
 }
 
 @Composable
@@ -153,15 +224,25 @@ private fun CurrentPlanCard(planName: String) {
 }
 
 @Composable
-private fun ActivityStatsSection(steps: Int, calories: Int, heartRate: Int) {
+private fun ActivityStatsSection(
+    steps: Int, 
+    stepTarget: Int, 
+    calories: Int, 
+    heartRate: Int,
+    userDao: UserDao
+) {
+    var showStepTargetDialog by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        ActivityStatCard(
-            icon = Icons.Default.DirectionsWalk,
-            value = "$steps",
-            label = "Steps",
+        // Enhanced Steps Card with Progress Bar
+        StepCounterCard(
+            steps = steps,
+            stepTarget = stepTarget,
+            onClick = { showStepTargetDialog = true },
             modifier = Modifier.weight(1f)
         )
         Spacer(modifier = Modifier.width(8.dp))
@@ -177,6 +258,20 @@ private fun ActivityStatsSection(steps: Int, calories: Int, heartRate: Int) {
             value = "$heartRate",
             label = "BPM",
             modifier = Modifier.weight(1f)
+        )
+    }
+    
+    // Step Target Dialog
+    if (showStepTargetDialog) {
+        StepTargetDialog(
+            currentTarget = stepTarget,
+            onDismiss = { showStepTargetDialog = false },
+            onTargetSet = { newTarget ->
+                scope.launch {
+                    userDao.updateStepTarget(newTarget)
+                }
+                showStepTargetDialog = false
+            }
         )
     }
 }
@@ -401,6 +496,161 @@ fun MedicalAssistanceCard(modifier: Modifier = Modifier) {
                     .alpha(0.6f),
                 tint = MaterialTheme.colorScheme.error
             )
+        }
+    }
+}
+
+@Composable
+private fun StepCounterCard(
+    steps: Int,
+    stepTarget: Int,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val progress = if (stepTarget > 0) (steps.toFloat() / stepTarget.toFloat()).coerceIn(0f, 1f) else 0f
+    val displayTarget = if (stepTarget == 0) 0 else stepTarget
+    
+    Card(
+        modifier = modifier
+            .clickable { onClick() }
+            .shadow(4.dp, RoundedCornerShape(12.dp)),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Icon(
+                Icons.Default.DirectionsWalk, 
+                contentDescription = "Steps"
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "$steps",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = "Steps",
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            // Only show progress bar if target is set
+            if (stepTarget > 0) {
+                LinearProgressIndicator(
+                    progress = { progress },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(4.dp),
+                    color = MaterialTheme.colorScheme.primary,
+                    trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+            }
+            
+            Text(
+                text = "$steps / $displayTarget",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+            )
+        }
+    }
+}
+
+@Composable
+private fun StepTargetDialog(
+    currentTarget: Int,
+    onDismiss: () -> Unit,
+    onTargetSet: (Int) -> Unit
+) {
+    var targetText by remember { 
+        mutableStateOf(
+            if (currentTarget == 0) "" else currentTarget.toString()
+        ) 
+    }
+    
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surface
+            ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Icon(
+                    Icons.Default.DirectionsWalk,
+                    contentDescription = "Step Target",
+                    modifier = Modifier.size(48.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                Text(
+                    text = "Set Step Target",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                Text(
+                    text = "Set your daily step goal",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                )
+                
+                Spacer(modifier = Modifier.height(24.dp))
+                
+                OutlinedTextField(
+                    value = targetText,
+                    onValueChange = { targetText = it },
+                    label = { Text("Step Target") },
+                    placeholder = { Text("e.g., 10000") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp)
+                )
+                
+                Spacer(modifier = Modifier.height(24.dp))
+                
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    TextButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("Cancel")
+                    }
+                    
+                    Spacer(modifier = Modifier.width(8.dp))
+                    
+                    Button(
+                        onClick = {
+                            val target = targetText.toIntOrNull()
+                            if (target != null && target > 0) {
+                                onTargetSet(target)
+                            }
+                        },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("Set Target")
+                    }
+                }
+            }
         }
     }
 }

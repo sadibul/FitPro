@@ -19,4 +19,7 @@ interface UserDao {
 
     @Query("UPDATE user_profile SET heartRate = :rate WHERE id = 1")
     suspend fun updateHeartRate(rate: Int)
+    
+    @Query("UPDATE user_profile SET stepTarget = :target WHERE id = 1")
+    suspend fun updateStepTarget(target: Int)
 }

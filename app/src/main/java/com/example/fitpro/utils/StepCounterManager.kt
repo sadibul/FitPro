@@ -36,11 +36,11 @@ class StepCounterManager(private val context: Context) : SensorEventListener {
     fun startListening() {
         if (!isListening) {
             stepCounterSensor?.let { sensor ->
-                sensorManager.registerListener(this, sensor, SensorManager.SENSOR_DELAY_UI)
+                sensorManager.registerListener(this, sensor, SensorManager.SENSOR_DELAY_FASTEST)
                 isListening = true
             }
             stepDetectorSensor?.let { sensor ->
-                sensorManager.registerListener(this, sensor, SensorManager.SENSOR_DELAY_UI)
+                sensorManager.registerListener(this, sensor, SensorManager.SENSOR_DELAY_FASTEST)
             }
         }
     }
@@ -63,7 +63,7 @@ class StepCounterManager(private val context: Context) : SensorEventListener {
                     } else {
                         val currentTotalSteps = sensorEvent.values[0].toInt()
                         val savedInitialCount = getTodaysInitialCount()
-                        val todaysSteps = currentTotalSteps - savedInitialCount
+                        val todaysSteps = maxOf(0, currentTotalSteps - savedInitialCount)
                         updateTodaysSteps(todaysSteps)
                     }
                 }
