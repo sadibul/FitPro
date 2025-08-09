@@ -12,6 +12,7 @@ import androidx.navigation.NavController
 import com.example.fitpro.Screen
 import com.example.fitpro.data.UserDao
 import com.example.fitpro.data.UserProfile
+import com.example.fitpro.utils.UserSession
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -19,6 +20,9 @@ import kotlinx.coroutines.launch
 fun QuestionsScreen(
     navController: NavController,
     userDao: UserDao,
+    userName: String,
+    userEmail: String,
+    userSession: UserSession,
     onQuestionsComplete: () -> Unit = {}
 ) {
     var gender by remember { mutableStateOf("") }
@@ -119,18 +123,21 @@ fun QuestionsScreen(
                 coroutineScope.launch {
                     try {
                         val userProfile = UserProfile(
-                            id = 1,
-                            name = "User", // This should come from sign up
-                            email = "user@email.com", // This should come from sign up
+                            email = userEmail,
+                            name = userName,
                             gender = gender,
                             age = age.toIntOrNull() ?: 25,
                             weight = weight.toFloatOrNull() ?: 70f,
                             height = height.toIntOrNull() ?: 170
                         )
                         userDao.insertOrUpdateUser(userProfile)
+                        
+                        // Save user session
+                        userSession.saveUserSession(userEmail)
+                        
                         onQuestionsComplete()
                     } catch (e: Exception) {
-                        // Handle error
+                        // Handle error - still complete to avoid getting stuck
                         onQuestionsComplete()
                     }
                 }

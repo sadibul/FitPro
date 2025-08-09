@@ -32,11 +32,14 @@ import com.example.fitpro.data.WorkoutPlanDao
 import com.example.fitpro.ui.screens.*
 import com.example.fitpro.ui.theme.FitProTheme
 import com.example.fitpro.utils.StepCounterManager
+import com.example.fitpro.utils.UserSession
 
 sealed class Screen(val route: String) {
     object Login : Screen("login")
     object SignUp : Screen("signup")
-    object Questions : Screen("questions")
+    object Questions : Screen("questions/{name}/{email}") {
+        fun createRoute(name: String, email: String) = "questions/$name/$email"
+    }
     object Home : Screen("home")
     object BMIDetails : Screen("bmi_details")
     object Plan : Screen("plan")
@@ -103,20 +106,30 @@ fun FitProApp() {
             }
         }
         userDao != null && workoutPlanDao != null && mealPlanDao != null && stepCounterManager != null -> {
-            val userProfileFlow = remember { userDao!!.getUserProfile() }
+            val userSession = remember { UserSession(context) }
+            val currentUserEmail = userSession.getCurrentUserEmail()
+            val userProfileFlow = remember(currentUserEmail) { 
+                if (currentUserEmail != null) {
+                    userDao!!.getUserProfile(currentUserEmail)
+                } else {
+                    kotlinx.coroutines.flow.flowOf(null)
+                }
+            }
             
-            if (isLoggedIn) {
+            if (isLoggedIn && currentUserEmail != null) {
                 MainAppWithBottomNav(
                     userDao = userDao!!,
                     workoutPlanDao = workoutPlanDao!!,
                     mealPlanDao = mealPlanDao!!,
                     stepCounterManager = stepCounterManager!!,
-                    userProfileFlow = userProfileFlow
+                    userProfileFlow = userProfileFlow,
+                    userSession = userSession
                 )
             } else {
                 AuthNavigation(
                     navController = navController,
                     userDao = userDao!!,
+                    userSession = userSession,
                     onLoginSuccess = { isLoggedIn = true }
                 )
             }
@@ -137,6 +150,7 @@ fun FitProApp() {
 fun AuthNavigation(
     navController: androidx.navigation.NavHostController,
     userDao: UserDao,
+    userSession: UserSession,
     onLoginSuccess: () -> Unit
 ) {
     NavHost(
@@ -153,10 +167,15 @@ fun AuthNavigation(
         composable(Screen.SignUp.route) {
             SignUpScreen(navController)
         }
-        composable(Screen.Questions.route) {
+        composable(Screen.Questions.route) { backStackEntry ->
+            val name = backStackEntry.arguments?.getString("name") ?: ""
+            val email = backStackEntry.arguments?.getString("email") ?: ""
             QuestionsScreen(
                 navController = navController,
                 userDao = userDao,
+                userName = name,
+                userEmail = email,
+                userSession = userSession,
                 onQuestionsComplete = onLoginSuccess
             )
         }
@@ -170,7 +189,8 @@ fun MainAppWithBottomNav(
     workoutPlanDao: WorkoutPlanDao,
     mealPlanDao: MealPlanDao,
     stepCounterManager: StepCounterManager,
-    userProfileFlow: kotlinx.coroutines.flow.Flow<com.example.fitpro.data.UserProfile?>
+    userProfileFlow: kotlinx.coroutines.flow.Flow<com.example.fitpro.data.UserProfile?>,
+    userSession: UserSession
 ) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -263,11 +283,22 @@ fun MainAppWithBottomNav(
                 )
             }
             composable(Screen.Account.route) {
-                AccountScreen(
-                    navController = navController,
-                    userProfileFlow = userProfileFlow,
-                    userDao = userDao
-                )
+                val currentUserEmail = userSession.getCurrentUserEmail()
+                if (currentUserEmail != null) {
+                    AccountScreen(
+                        navController = navController,
+                        userDao = userDao,
+                        currentUserEmail = currentUserEmail,
+                        userSession = userSession
+                    )
+                } else {
+                    // If no user logged in, navigate to login
+                    LaunchedEffect(Unit) {
+                        navController.navigate(Screen.Login.route) {
+                            popUpTo(0) { inclusive = true }
+                        }
+                    }
+                }
             }
             composable(Screen.BMIDetails.route) {
                 BMIDetailsScreen(

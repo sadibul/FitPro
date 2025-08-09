@@ -26,6 +26,7 @@ import androidx.navigation.NavController
 import com.example.fitpro.Screen
 import com.example.fitpro.data.UserDao
 import com.example.fitpro.data.UserProfile
+import com.example.fitpro.utils.UserSession
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 
@@ -33,10 +34,14 @@ import kotlinx.coroutines.launch
 @Composable
 fun AccountScreen(
     navController: NavController,
-    userProfileFlow: Flow<UserProfile?>,
-    userDao: UserDao
+    userDao: UserDao,
+    currentUserEmail: String,
+    userSession: UserSession
 ) {
-    val userProfile by userProfileFlow.collectAsStateWithLifecycle(initialValue = null)
+    val userFlow: Flow<UserProfile?> = remember(currentUserEmail) {
+        userDao.getUserProfile(currentUserEmail)
+    }
+    val userProfile by userFlow.collectAsStateWithLifecycle(initialValue = null)
     val coroutineScope = rememberCoroutineScope()
     
     var showEditProfileDialog by remember { mutableStateOf(false) }
@@ -63,7 +68,14 @@ fun AccountScreen(
         )
         
         // Settings Options
-        SettingsOptionsCard()
+        SettingsOptionsCard(
+            onLogoutClick = {
+                userSession.logout()
+                navController.navigate(Screen.Login.route) {
+                    popUpTo(Screen.Login.route) { inclusive = true }
+                }
+            }
+        )
         
         // App Info
         AppInfoCard()
@@ -283,7 +295,9 @@ private fun StatItem(
 }
 
 @Composable
-private fun SettingsOptionsCard() {
+private fun SettingsOptionsCard(
+    onLogoutClick: () -> Unit
+) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -325,6 +339,13 @@ private fun SettingsOptionsCard() {
                 title = "Privacy",
                 subtitle = "Privacy settings",
                 onClick = { /* Handle privacy */ }
+            )
+            
+            SettingsItem(
+                icon = Icons.Default.ExitToApp,
+                title = "Logout",
+                subtitle = "Sign out of your account",
+                onClick = onLogoutClick
             )
         }
     }

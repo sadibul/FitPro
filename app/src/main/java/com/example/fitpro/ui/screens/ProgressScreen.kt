@@ -528,9 +528,8 @@ private fun ProgressScreenPreview() {
     MaterialTheme {
         ProgressScreenContent(
             userProfile = UserProfile(
-                id = 1,
-                name = "John Doe",
                 email = "john.doe@example.com",
+                name = "John Doe",
                 gender = "Male",
                 age = 30,
                 height = 175,

@@ -6,9 +6,8 @@ import kotlin.math.pow
 
 @Entity(tableName = "user_profile")
 data class UserProfile(
-    @PrimaryKey val id: Int = 1, // Single user profile
+    @PrimaryKey val email: String, // Use email as primary key for multi-user support
     val name: String,
-    val email: String,
     val gender: String,
     val age: Int,
     val weight: Float,

@@ -80,12 +80,18 @@ fun SignUpScreen(navController: NavController) {
         )
 
         Button(
-            onClick = { navController.navigate(Screen.Questions.route) },
+            onClick = { 
+                if (name.isNotEmpty() && email.isNotEmpty() && password.isNotEmpty() && password == confirmPassword) {
+                    navController.navigate(Screen.Questions.createRoute(name, email))
+                }
+            },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(50.dp)
                 .shadow(8.dp, RoundedCornerShape(25.dp)),
-            shape = RoundedCornerShape(25.dp)
+            shape = RoundedCornerShape(25.dp),
+            enabled = name.isNotEmpty() && email.isNotEmpty() && 
+                     password.isNotEmpty() && password == confirmPassword
         ) {
             Text("Sign Up")
         }

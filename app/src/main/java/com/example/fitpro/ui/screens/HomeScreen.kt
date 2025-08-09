@@ -1,7 +1,11 @@
 package com.example.fitpro.ui.screens
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -22,6 +26,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -33,6 +38,7 @@ import androidx.navigation.NavController
 import com.example.fitpro.data.UserProfile
 import com.example.fitpro.data.UserDao
 import com.example.fitpro.utils.StepCounterManager
+import com.example.fitpro.utils.UserSession
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
@@ -46,23 +52,48 @@ fun HomeScreen(
     stepCounterManager: StepCounterManager,
     onBMICardClick: () -> Unit
 ) {
+    val context = LocalContext.current
     val userProfile by userProfileFlow.collectAsStateWithLifecycle(initialValue = null)
     val scrollState = rememberScrollState()
     val dailySteps by stepCounterManager.dailySteps.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
+    val userSession = remember { UserSession(context) }
+    val currentUserEmail = userSession.getCurrentUserEmail()
+
+    // Permission request launcher
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            stepCounterManager.startListening()
+        }
+    }
+
+    // Check and request permission when screen loads
+    LaunchedEffect(Unit) {
+        when (PackageManager.PERMISSION_GRANTED) {
+            ContextCompat.checkSelfPermission(context, Manifest.permission.ACTIVITY_RECOGNITION) -> {
+                stepCounterManager.startListening()
+            }
+            else -> {
+                permissionLauncher.launch(Manifest.permission.ACTIVITY_RECOGNITION)
+            }
+        }
+    }
 
     // Start step counting when screen is active and stop when inactive
     DisposableEffect(Unit) {
-        stepCounterManager.startListening()
         onDispose {
             stepCounterManager.stopListening()
         }
     }
 
     // Sync steps with database periodically
-    LaunchedEffect(dailySteps) {
-        scope.launch {
-            userDao.updateSteps(dailySteps)
+    LaunchedEffect(dailySteps, currentUserEmail) {
+        currentUserEmail?.let { email ->
+            scope.launch {
+                userDao.updateSteps(email, dailySteps)
+            }
         }
     }
 
@@ -89,7 +120,8 @@ fun HomeScreen(
             stepTarget = userProfile?.stepTarget ?: 0,
             calories = userProfile?.caloriesBurned ?: 0,
             heartRate = userProfile?.heartRate ?: 0,
-            userDao = userDao
+            userDao = userDao,
+            currentUserEmail = currentUserEmail
         )
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -229,7 +261,8 @@ private fun ActivityStatsSection(
     stepTarget: Int, 
     calories: Int, 
     heartRate: Int,
-    userDao: UserDao
+    userDao: UserDao,
+    currentUserEmail: String?
 ) {
     var showStepTargetDialog by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
@@ -267,8 +300,10 @@ private fun ActivityStatsSection(
             currentTarget = stepTarget,
             onDismiss = { showStepTargetDialog = false },
             onTargetSet = { newTarget ->
-                scope.launch {
-                    userDao.updateStepTarget(newTarget)
+                currentUserEmail?.let { email ->
+                    scope.launch {
+                        userDao.updateStepTarget(email, newTarget)
+                    }
                 }
                 showStepTargetDialog = false
             }
@@ -615,7 +650,7 @@ private fun StepTargetDialog(
                     value = targetText,
                     onValueChange = { targetText = it },
                     label = { Text("Step Target") },
-                    placeholder = { Text("e.g., 10000") },
+                    placeholder = { Text("0000") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
