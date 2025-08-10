@@ -15,6 +15,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -22,6 +23,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.example.fitpro.data.*
 import com.example.fitpro.ui.theme.ChartBlue
+import com.example.fitpro.utils.UserSession
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 
@@ -33,20 +35,31 @@ fun ProgressScreen(
     workoutPlanDao: WorkoutPlanDao,
     mealPlanDao: MealPlanDao
 ) {
+    val context = LocalContext.current
+    val userSession = remember { UserSession(context) }
+    val currentUserEmail = userSession.getCurrentUserEmail()
+    
     val userProfile by userProfileFlow.collectAsStateWithLifecycle(initialValue = null)
-    val weeklyCalories by mealPlanDao.getWeeklyCalories(1)
-        .collectAsStateWithLifecycle(initialValue = 0)
-    val weeklyWorkouts by workoutPlanDao.getWeeklyWorkoutCount(1)
-        .collectAsStateWithLifecycle(initialValue = 0)
-    val weeklyDuration by workoutPlanDao.getWeeklyWorkoutDuration(1)
-        .collectAsStateWithLifecycle(initialValue = 0)
-    val averageDailyCalories by mealPlanDao.getAverageDailyCalories(1)
-        .collectAsStateWithLifecycle(initialValue = 0f)
-    val dailyCaloriesList by mealPlanDao.getDailyCaloriesForWeek(1)
-        .collectAsStateWithLifecycle(initialValue = emptyList())
+    
+    // For now, using fallback values since MealPlan still uses userId
+    val weeklyCalories by (currentUserEmail?.let {
+        flowOf(0).collectAsStateWithLifecycle(initialValue = 0) // Placeholder until MealPlan is updated
+    } ?: flowOf(0).collectAsStateWithLifecycle(initialValue = 0))
+    
+    val weeklyWorkouts by (currentUserEmail?.let {
+        workoutPlanDao.getWeeklyWorkoutCount(it).collectAsStateWithLifecycle(initialValue = 0)
+    } ?: flowOf(0).collectAsStateWithLifecycle(initialValue = 0))
+    
+    val weeklyDuration by (currentUserEmail?.let {
+        workoutPlanDao.getWeeklyWorkoutDuration(it).collectAsStateWithLifecycle(initialValue = 0)
+    } ?: flowOf(0).collectAsStateWithLifecycle(initialValue = 0))
+    
+    // Placeholder values for meal-related data
+    val averageDailyCalories by flowOf(0f).collectAsStateWithLifecycle(initialValue = 0f)
+    val dailyCaloriesList by flowOf(emptyList<Int>()).collectAsStateWithLifecycle(initialValue = emptyList())
 
-    // Convert List<DailyCalories> to Map<String, Int>
-    val dailyCaloriesForWeek = dailyCaloriesList.associate { it.date to it.calories }
+    // Placeholder for daily calories map
+    val dailyCaloriesForWeek = emptyMap<String, Int>()
 
     Scaffold(
         topBar = {
@@ -530,6 +543,7 @@ private fun ProgressScreenPreview() {
             userProfile = UserProfile(
                 email = "john.doe@example.com",
                 name = "John Doe",
+                password = "password123",
                 gender = "Male",
                 age = 30,
                 height = 175,

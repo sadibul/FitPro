@@ -88,7 +88,7 @@ fun AccountScreen(
             onDismiss = { showEditProfileDialog = false },
             onSave = { updatedProfile ->
                 coroutineScope.launch {
-                    userDao.insertOrUpdateUser(updatedProfile)
+                    userDao.updateUser(updatedProfile)
                     showEditProfileDialog = false
                 }
             }
@@ -108,7 +108,7 @@ fun AccountScreen(
                             height = height,
                             age = age
                         )
-                        userDao.insertOrUpdateUser(updatedProfile)
+                        userDao.updateUser(updatedProfile)
                         showUpdateStatsDialog = false
                     }
                 }

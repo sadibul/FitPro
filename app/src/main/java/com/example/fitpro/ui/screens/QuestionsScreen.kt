@@ -22,6 +22,7 @@ fun QuestionsScreen(
     userDao: UserDao,
     userName: String,
     userEmail: String,
+    userPassword: String,
     userSession: UserSession,
     onQuestionsComplete: () -> Unit = {}
 ) {
@@ -125,20 +126,26 @@ fun QuestionsScreen(
                         val userProfile = UserProfile(
                             email = userEmail,
                             name = userName,
+                            password = userPassword,
                             gender = gender,
                             age = age.toIntOrNull() ?: 25,
                             weight = weight.toFloatOrNull() ?: 70f,
                             height = height.toIntOrNull() ?: 170
                         )
-                        userDao.insertOrUpdateUser(userProfile)
+                        userDao.insertUser(userProfile)
                         
                         // Save user session with remember me enabled for new users
                         userSession.saveUserSession(userEmail, true)
                         
-                        onQuestionsComplete()
+                        // Ensure state update happens on main thread
+                        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                            onQuestionsComplete()
+                        }
                     } catch (e: Exception) {
                         // Handle error - still complete to avoid getting stuck
-                        onQuestionsComplete()
+                        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                            onQuestionsComplete()
+                        }
                     }
                 }
             },

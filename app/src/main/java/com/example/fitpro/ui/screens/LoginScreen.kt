@@ -15,6 +15,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.fitpro.Screen
+import com.example.fitpro.data.UserDao
 import com.example.fitpro.utils.UserSession
 import kotlinx.coroutines.launch
 
@@ -23,12 +24,15 @@ import kotlinx.coroutines.launch
 fun LoginScreen(
     navController: NavController,
     userSession: UserSession,
+    userDao: UserDao,
     onLoginSuccess: () -> Unit = {}
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var rememberMe by remember { mutableStateOf(false) }
     var showPassword by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf("") }
+    var isLoading by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
 
     Column(
@@ -114,29 +118,76 @@ fun LoginScreen(
             }
         }
 
+        // Error message display
+        if (errorMessage.isNotEmpty()) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer
+                )
+            ) {
+                Text(
+                    text = errorMessage,
+                    modifier = Modifier.padding(12.dp),
+                    color = MaterialTheme.colorScheme.onErrorContainer,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+        }
+
         Button(
             onClick = { 
                 coroutineScope.launch {
-                    // For demo purposes, we'll simulate successful login
-                    // In a real app, you'd validate credentials against database first
                     if (email.isNotBlank() && password.isNotBlank()) {
-                        userSession.saveUserSession(email, rememberMe)
-                        onLoginSuccess()
+                        isLoading = true
+                        errorMessage = ""
+                        
+                        try {
+                            // Authenticate user against database
+                            val user = userDao.authenticateUser(email.trim(), password)
+                            if (user != null) {
+                                // Login successful
+                                userSession.saveUserSession(email.trim(), rememberMe)
+                                onLoginSuccess()
+                            } else {
+                                // Check if user exists but wrong password
+                                if (userDao.userExists(email.trim())) {
+                                    errorMessage = "Incorrect password. Please try again."
+                                } else {
+                                    errorMessage = "Account not found. Please sign up first."
+                                }
+                            }
+                        } catch (e: Exception) {
+                            errorMessage = "Login failed. Please try again."
+                        } finally {
+                            isLoading = false
+                        }
+                    } else {
+                        errorMessage = "Please fill in all fields."
                     }
                 }
             },
-            enabled = email.isNotBlank() && password.isNotBlank(),
+            enabled = email.isNotBlank() && password.isNotBlank() && !isLoading,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp)
                 .shadow(4.dp, RoundedCornerShape(16.dp)),
             shape = RoundedCornerShape(16.dp)
         ) {
-            Text(
-                text = "Login",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
-            )
+            if (isLoading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(20.dp),
+                    color = MaterialTheme.colorScheme.onPrimary
+                )
+            } else {
+                Text(
+                    text = "Login",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(24.dp))

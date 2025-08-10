@@ -12,6 +12,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
@@ -19,6 +20,7 @@ import com.example.fitpro.FitProApp
 import com.example.fitpro.data.UserProfile
 import com.example.fitpro.data.WorkoutPlan
 import com.example.fitpro.data.WorkoutPlanDao
+import com.example.fitpro.utils.UserSession
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 
@@ -29,6 +31,10 @@ fun WorkoutPlanScreen(
     userProfileFlow: Flow<UserProfile?>,
     workoutPlanDao: WorkoutPlanDao
 ) {
+    val context = LocalContext.current
+    val userSession = remember { UserSession(context) }
+    val currentUserEmail = userSession.getCurrentUserEmail()
+    
     var selectedWorkoutType by remember { mutableStateOf("") }
     var duration by remember { mutableStateOf("30") }
     var targetCalories by remember { mutableStateOf("300") }
@@ -145,17 +151,19 @@ fun WorkoutPlanScreen(
                 Button(
                     onClick = {
                         coroutineScope.launch {
-                            val workoutPlan = WorkoutPlan(
-                                userId = 1,
-                                type = selectedWorkoutType,
-                                duration = duration.toInt(),
-                                targetCalories = targetCalories.toInt()
-                            )
-                            workoutPlanDao.insertWorkoutPlan(workoutPlan)
-                            navController.navigateUp()
+                            currentUserEmail?.let { email ->
+                                val workoutPlan = WorkoutPlan(
+                                    userEmail = email,
+                                    type = selectedWorkoutType,
+                                    duration = duration.toInt(),
+                                    targetCalories = targetCalories.toInt()
+                                )
+                                workoutPlanDao.insertWorkoutPlan(workoutPlan)
+                                navController.navigateUp()
+                            }
                         }
                     },
-                    enabled = selectedWorkoutType.isNotEmpty(),
+                    enabled = selectedWorkoutType.isNotEmpty() && currentUserEmail != null,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp)

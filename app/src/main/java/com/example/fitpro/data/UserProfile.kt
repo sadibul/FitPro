@@ -8,6 +8,7 @@ import kotlin.math.pow
 data class UserProfile(
     @PrimaryKey val email: String, // Use email as primary key for multi-user support
     val name: String,
+    val password: String, // Store password for authentication
     val gender: String,
     val age: Int,
     val weight: Float,

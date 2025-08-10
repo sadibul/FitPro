@@ -7,7 +7,7 @@ import androidx.room.RoomDatabase
 
 @Database(
     entities = [UserProfile::class, WorkoutPlan::class, MealPlan::class],
-    version = 8,
+    version = 10,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -28,7 +28,7 @@ abstract class AppDatabase : RoomDatabase() {
                 )
                     .fallbackToDestructiveMigration()
                     .fallbackToDestructiveMigrationOnDowngrade()
-                    .fallbackToDestructiveMigrationFrom(1, 2, 3, 4, 5, 6, 7)
+                    .fallbackToDestructiveMigrationFrom(1, 2, 3, 4, 5, 6, 7, 8, 9)
                     .build()
                 INSTANCE = instance
                 instance

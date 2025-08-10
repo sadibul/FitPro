@@ -37,8 +37,8 @@ import com.example.fitpro.utils.UserSession
 sealed class Screen(val route: String) {
     object Login : Screen("login")
     object SignUp : Screen("signup")
-    object Questions : Screen("questions/{name}/{email}") {
-        fun createRoute(name: String, email: String) = "questions/$name/$email"
+    object Questions : Screen("questions/{name}/{email}/{password}") {
+        fun createRoute(name: String, email: String, password: String) = "questions/$name/$email/$password"
     }
     object Home : Screen("home")
     object BMIDetails : Screen("bmi_details")
@@ -117,6 +117,14 @@ fun FitProApp() {
         }
         userDao != null && workoutPlanDao != null && mealPlanDao != null && stepCounterManager != null -> {
             val userSession = remember { UserSession(context) }
+            
+            // Check session state on startup
+            LaunchedEffect(Unit) {
+                val currentEmail = userSession.getCurrentUserEmail()
+                val shouldRemember = userSession.shouldRememberUser()
+                isLoggedIn = currentEmail != null && shouldRemember
+            }
+            
             val currentUserEmail = userSession.getCurrentUserEmail()
             val shouldRememberUser = userSession.shouldRememberUser()
             val userProfileFlow = remember(currentUserEmail) { 
@@ -127,8 +135,8 @@ fun FitProApp() {
                 }
             }
             
-            // Show main app if user is logged in and should be remembered
-            if ((isLoggedIn || shouldRememberUser) && currentUserEmail != null) {
+            // Show main app if user is logged in or should be remembered
+            if (isLoggedIn || (shouldRememberUser && currentUserEmail != null)) {
                 MainAppWithBottomNav(
                     userDao = userDao!!,
                     workoutPlanDao = workoutPlanDao!!,
@@ -174,20 +182,26 @@ fun AuthNavigation(
             LoginScreen(
                 navController = navController,
                 userSession = userSession,
+                userDao = userDao,
                 onLoginSuccess = onLoginSuccess
             )
         }
         composable(Screen.SignUp.route) {
-            SignUpScreen(navController)
+            SignUpScreen(
+                navController = navController,
+                userDao = userDao
+            )
         }
         composable(Screen.Questions.route) { backStackEntry ->
             val name = backStackEntry.arguments?.getString("name") ?: ""
             val email = backStackEntry.arguments?.getString("email") ?: ""
+            val password = backStackEntry.arguments?.getString("password") ?: ""
             QuestionsScreen(
                 navController = navController,
                 userDao = userDao,
                 userName = name,
                 userEmail = email,
+                userPassword = password,
                 userSession = userSession,
                 onQuestionsComplete = onLoginSuccess
             )
@@ -277,6 +291,7 @@ fun MainAppWithBottomNav(
                     navController = navController,
                     userProfileFlow = userProfileFlow,
                     userDao = userDao,
+                    workoutPlanDao = workoutPlanDao,
                     stepCounterManager = stepCounterManager,
                     onBMICardClick = { navController.navigate(Screen.BMIDetails.route) }
                 )

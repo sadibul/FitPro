@@ -10,6 +10,8 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -37,10 +39,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.example.fitpro.data.UserProfile
 import com.example.fitpro.data.UserDao
+import com.example.fitpro.data.WorkoutPlan
+import com.example.fitpro.data.WorkoutPlanDao
 import com.example.fitpro.utils.StepCounterManager
 import com.example.fitpro.utils.UserSession
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -49,6 +54,7 @@ fun HomeScreen(
     navController: NavController,
     userProfileFlow: Flow<UserProfile?>,
     userDao: UserDao,
+    workoutPlanDao: WorkoutPlanDao,
     stepCounterManager: StepCounterManager,
     onBMICardClick: () -> Unit
 ) {
@@ -109,8 +115,12 @@ fun HomeScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Current Plan Section
-        CurrentPlanCard(userProfile?.currentPlan ?: "Weight Loss Plan")
+        // Current Plan Section with Workout Cards
+        CurrentPlanSection(
+            planName = userProfile?.currentPlan ?: "Weight Loss Plan",
+            userEmail = currentUserEmail,
+            workoutPlanDao = workoutPlanDao
+        )
 
         Spacer(modifier = Modifier.height(24.dp))
 
@@ -222,36 +232,147 @@ private fun WelcomeSection(name: String) {
 }
 
 @Composable
-private fun CurrentPlanCard(planName: String) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .shadow(8.dp, RoundedCornerShape(16.dp)),
-        shape = RoundedCornerShape(16.dp)
-    ) {
-        Row(
+private fun CurrentPlanSection(
+    planName: String,
+    userEmail: String?,
+    workoutPlanDao: WorkoutPlanDao
+) {
+    val scope = rememberCoroutineScope()
+    val workoutPlans by (userEmail?.let { 
+        workoutPlanDao.getAllWorkoutPlans(it).collectAsStateWithLifecycle(initialValue = emptyList<WorkoutPlan>())
+    } ?: flowOf(emptyList<WorkoutPlan>()).collectAsStateWithLifecycle(initialValue = emptyList<WorkoutPlan>()))
+
+    Column {
+        // Main Plan Card
+        Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+                .shadow(8.dp, RoundedCornerShape(16.dp)),
+            shape = RoundedCornerShape(16.dp)
         ) {
-            Column {
-                Text(
-                    text = "Current Plan",
-                    style = MaterialTheme.typography.titleMedium
-                )
-                Text(
-                    text = planName,
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Bold
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(
+                        text = "Current Plan",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Text(
+                        text = planName,
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                Icon(
+                    Icons.Default.FitnessCenter,
+                    contentDescription = "Fitness Plan"
                 )
             }
-            Icon(
-                Icons.Default.FitnessCenter,
-                contentDescription = "Fitness Plan"
+        }
+
+        // Workout Cards Section
+        if (workoutPlans.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                text = "Your Workouts",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.padding(horizontal = 4.dp)
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                contentPadding = PaddingValues(horizontal = 4.dp)
+            ) {
+                items(workoutPlans) { workout ->
+                    WorkoutCard(
+                        workout = workout,
+                        onDelete = {
+                            scope.launch {
+                                workoutPlanDao.deleteWorkoutPlan(workout)
+                            }
+                        }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun WorkoutCard(
+    workout: WorkoutPlan,
+    onDelete: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .width(160.dp)
+            .shadow(4.dp, RoundedCornerShape(12.dp)),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
+            ) {
+                Icon(
+                    imageVector = getWorkoutIcon(workout.type),
+                    contentDescription = workout.type,
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                IconButton(
+                    onClick = onDelete,
+                    modifier = Modifier.size(20.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Close,
+                        contentDescription = "Delete workout",
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            Text(
+                text = workout.type,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold
+            )
+            
+            Text(
+                text = "${workout.duration} min",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            
+            Text(
+                text = "${workout.targetCalories} cal",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
+    }
+}
+
+private fun getWorkoutIcon(workoutType: String): ImageVector {
+    return when (workoutType) {
+        "Cardio" -> Icons.Default.DirectionsRun
+        "Strength" -> Icons.Default.FitnessCenter
+        "Flexibility" -> Icons.Default.SelfImprovement
+        "HIIT" -> Icons.Default.Timer
+        "Yoga" -> Icons.Default.Accessibility
+        else -> Icons.Default.FitnessCenter
     }
 }
 

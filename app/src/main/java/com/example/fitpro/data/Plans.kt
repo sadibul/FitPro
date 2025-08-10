@@ -6,7 +6,7 @@ import androidx.room.PrimaryKey
 @Entity(tableName = "workout_plans")
 data class WorkoutPlan(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
-    val userId: Int,
+    val userEmail: String, // Changed from userId to userEmail
     val type: String,
     val duration: Int, // in minutes
     val targetCalories: Int,

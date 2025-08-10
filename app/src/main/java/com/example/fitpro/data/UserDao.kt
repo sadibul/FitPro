@@ -5,11 +5,20 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface UserDao {
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertOrUpdateUser(user: UserProfile)
+    @Insert(onConflict = OnConflictStrategy.ABORT) // Don't replace existing users
+    suspend fun insertUser(user: UserProfile)
+    
+    @Update
+    suspend fun updateUser(user: UserProfile)
 
     @Query("SELECT * FROM user_profile WHERE email = :email")
     fun getUserProfile(email: String): Flow<UserProfile?>
+    
+    @Query("SELECT * FROM user_profile WHERE email = :email")
+    suspend fun getUserByEmail(email: String): UserProfile?
+    
+    @Query("SELECT * FROM user_profile WHERE email = :email AND password = :password")
+    suspend fun authenticateUser(email: String, password: String): UserProfile?
 
     @Query("UPDATE user_profile SET dailySteps = :steps WHERE email = :email")
     suspend fun updateSteps(email: String, steps: Int)

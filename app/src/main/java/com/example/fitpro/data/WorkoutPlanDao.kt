@@ -13,26 +13,26 @@ interface WorkoutPlanDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertWorkoutPlan(plan: WorkoutPlan)
 
-    @Query("SELECT * FROM workout_plans WHERE userId = :userId ORDER BY id DESC LIMIT 1")
-    fun getCurrentWorkoutPlan(userId: Int): Flow<WorkoutPlan?>
+    @Query("SELECT * FROM workout_plans WHERE userEmail = :userEmail ORDER BY id DESC LIMIT 1")
+    fun getCurrentWorkoutPlan(userEmail: String): Flow<WorkoutPlan?>
 
-    @Query("SELECT * FROM workout_plans WHERE userId = :userId")
-    fun getAllWorkoutPlans(userId: Int): Flow<List<WorkoutPlan>>
+    @Query("SELECT * FROM workout_plans WHERE userEmail = :userEmail ORDER BY createdAt DESC")
+    fun getAllWorkoutPlans(userEmail: String): Flow<List<WorkoutPlan>>
 
-    @Query("SELECT SUM(targetCalories) FROM workout_plans WHERE userId = :userId AND id IN (SELECT MAX(id) FROM workout_plans GROUP BY type)")
-    fun getTotalTargetCalories(userId: Int): Flow<Int?>
+    @Query("SELECT SUM(targetCalories) FROM workout_plans WHERE userEmail = :userEmail AND id IN (SELECT MAX(id) FROM workout_plans GROUP BY type)")
+    fun getTotalTargetCalories(userEmail: String): Flow<Int?>
 
-    @Query("SELECT COUNT(*) FROM workout_plans WHERE userId = :userId AND date(createdAt) >= date('now', '-7 days')")
-    fun getWeeklyWorkoutCount(userId: Int): Flow<Int>
+    @Query("SELECT COUNT(*) FROM workout_plans WHERE userEmail = :userEmail AND date(createdAt/1000, 'unixepoch') >= date('now', '-7 days')")
+    fun getWeeklyWorkoutCount(userEmail: String): Flow<Int>
 
-    @Query("SELECT SUM(duration) FROM workout_plans WHERE userId = :userId AND date(createdAt) >= date('now', '-7 days')")
-    fun getWeeklyWorkoutDuration(userId: Int): Flow<Int?>
+    @Query("SELECT SUM(duration) FROM workout_plans WHERE userEmail = :userEmail AND date(createdAt/1000, 'unixepoch') >= date('now', '-7 days')")
+    fun getWeeklyWorkoutDuration(userEmail: String): Flow<Int?>
 
-    @Query("SELECT type, COUNT(*) as count FROM workout_plans WHERE userId = :userId GROUP BY type")
-    fun getWorkoutTypeDistribution(userId: Int): Flow<List<WorkoutTypeCount>>
+    @Query("SELECT type, COUNT(*) as count FROM workout_plans WHERE userEmail = :userEmail GROUP BY type")
+    fun getWorkoutTypeDistribution(userEmail: String): Flow<List<WorkoutTypeCount>>
 
-    @Query("SELECT * FROM workout_plans WHERE userId = :userId")
-    fun getWorkoutPlansForUser(userId: Int): Flow<List<WorkoutPlan>>
+    @Query("SELECT * FROM workout_plans WHERE userEmail = :userEmail")
+    fun getWorkoutPlansForUser(userEmail: String): Flow<List<WorkoutPlan>>
 
     @Update
     suspend fun updateWorkoutPlan(workoutPlan: WorkoutPlan)

@@ -11,14 +11,22 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.fitpro.Screen
+import com.example.fitpro.data.UserDao
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SignUpScreen(navController: NavController) {
+fun SignUpScreen(
+    navController: NavController,
+    userDao: UserDao
+) {
     var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
+    var errorMessage by remember { mutableStateOf("") }
+    var isLoading by remember { mutableStateOf(false) }
+    val coroutineScope = rememberCoroutineScope()
 
     Column(
         modifier = Modifier
@@ -79,21 +87,76 @@ fun SignUpScreen(navController: NavController) {
             shape = RoundedCornerShape(8.dp)
         )
 
+        // Error message display
+        if (errorMessage.isNotEmpty()) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer
+                )
+            ) {
+                Text(
+                    text = errorMessage,
+                    modifier = Modifier.padding(12.dp),
+                    color = MaterialTheme.colorScheme.onErrorContainer,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+        }
+
         Button(
             onClick = { 
-                if (name.isNotEmpty() && email.isNotEmpty() && password.isNotEmpty() && password == confirmPassword) {
-                    navController.navigate(Screen.Questions.createRoute(name, email))
+                coroutineScope.launch {
+                    if (name.isNotEmpty() && email.isNotEmpty() && password.isNotEmpty() && confirmPassword.isNotEmpty()) {
+                        if (password != confirmPassword) {
+                            errorMessage = "Passwords do not match."
+                            return@launch
+                        }
+                        
+                        if (password.length < 6) {
+                            errorMessage = "Password must be at least 6 characters long."
+                            return@launch
+                        }
+                        
+                        isLoading = true
+                        errorMessage = ""
+                        
+                        try {
+                            // Check if user already exists
+                            if (userDao.userExists(email.trim())) {
+                                errorMessage = "Email already exists. Please use a different email or try logging in."
+                            } else {
+                                // Email is available, proceed to questions
+                                navController.navigate(Screen.Questions.createRoute(name.trim(), email.trim(), password))
+                            }
+                        } catch (e: Exception) {
+                            errorMessage = "Sign up failed. Please try again."
+                        } finally {
+                            isLoading = false
+                        }
+                    } else {
+                        errorMessage = "Please fill in all fields."
+                    }
                 }
             },
+            enabled = name.isNotEmpty() && email.isNotEmpty() && 
+                     password.isNotEmpty() && confirmPassword.isNotEmpty() && !isLoading,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(50.dp)
                 .shadow(8.dp, RoundedCornerShape(25.dp)),
-            shape = RoundedCornerShape(25.dp),
-            enabled = name.isNotEmpty() && email.isNotEmpty() && 
-                     password.isNotEmpty() && password == confirmPassword
+            shape = RoundedCornerShape(25.dp)
         ) {
-            Text("Sign Up")
+            if (isLoading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(20.dp),
+                    color = MaterialTheme.colorScheme.onPrimary
+                )
+            } else {
+                Text("Sign Up")
+            }
         }
 
         TextButton(
