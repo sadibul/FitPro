@@ -8,8 +8,10 @@ data class WorkoutPlan(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val userEmail: String, // Changed from userId to userEmail
     val type: String,
+    val categoryId: Int = 0, // References WorkoutCategory.id
+    val categoryName: String = "", // Store category name for easy display
     val duration: Int, // in minutes
-    val targetCalories: Int,
+    val targetCalories: Int?, // Nullable for categories that don't use calories
     val createdAt: Long = System.currentTimeMillis()
 )
 

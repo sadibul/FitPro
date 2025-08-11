@@ -137,7 +137,8 @@ fun HomeScreen(
             calories = userProfile?.caloriesBurned ?: 0,
             heartRate = userProfile?.heartRate ?: 0,
             userDao = userDao,
-            currentUserEmail = currentUserEmail
+            currentUserEmail = currentUserEmail,
+            calorieTarget = userProfile?.calorieTarget ?: 0
         )
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -372,7 +373,7 @@ private fun WorkoutCard(
             Spacer(modifier = Modifier.height(8.dp))
             
             Text(
-                text = workout.type,
+                text = workout.categoryName.ifEmpty { workout.type },
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold
             )
@@ -383,11 +384,14 @@ private fun WorkoutCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             
-            Text(
-                text = "${workout.targetCalories} cal",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            // Only show calories if they exist
+            workout.targetCalories?.let { calories ->
+                Text(
+                    text = "$calories cal",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }
@@ -395,10 +399,22 @@ private fun WorkoutCard(
 private fun getWorkoutIcon(workoutType: String): ImageVector {
     return when (workoutType) {
         "Cardio" -> Icons.Default.DirectionsRun
-        "Strength" -> Icons.Default.FitnessCenter
+        "Strength Training" -> Icons.Default.FitnessCenter
         "Flexibility" -> Icons.Default.SelfImprovement
+        "Flexibility Training" -> Icons.Default.SelfImprovement
         "HIIT" -> Icons.Default.Timer
-        "Yoga" -> Icons.Default.Accessibility
+        "Yoga" -> Icons.Default.SelfImprovement
+        "Pilates" -> Icons.Default.Accessibility
+        "Dance Fitness / Zumba" -> Icons.Default.MusicNote
+        "Stretching / Mobility" -> Icons.Default.SelfImprovement
+        "CrossFit / Functional Training" -> Icons.Default.FitnessCenter
+        "Swimming" -> Icons.Default.Pool
+        "Cycling" -> Icons.Default.DirectionsBike
+        "Walking (Brisk)" -> Icons.Default.DirectionsWalk
+        "Rowing" -> Icons.Default.FitnessCenter
+        "Boxing / Kickboxing" -> Icons.Default.SportsMma
+        "Hiking" -> Icons.Default.Terrain
+        "Bodyweight Circuit" -> Icons.Default.FitnessCenter
         else -> Icons.Default.FitnessCenter
     }
 }
@@ -410,9 +426,11 @@ private fun ActivityStatsSection(
     calories: Int, 
     heartRate: Int,
     userDao: UserDao,
-    currentUserEmail: String?
+    currentUserEmail: String?,
+    calorieTarget: Int = 0
 ) {
     var showStepTargetDialog by remember { mutableStateOf(false) }
+    var showCalorieTargetDialog by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     
     Row(
@@ -427,18 +445,25 @@ private fun ActivityStatsSection(
             modifier = Modifier.weight(1f)
         )
         Spacer(modifier = Modifier.width(8.dp))
-        ActivityStatCard(
+        
+        // Enhanced Calories Burn Card
+        ActivityStatCardEnhanced(
             icon = Icons.Default.LocalFireDepartment,
             value = "$calories",
-            label = "Calories",
-            modifier = Modifier.weight(1f)
+            label = "Calories Burn",
+            modifier = Modifier.weight(1f),
+            onClick = { /* Could add functionality later */ }
         )
+        
         Spacer(modifier = Modifier.width(8.dp))
-        ActivityStatCard(
-            icon = Icons.Default.Favorite,
-            value = "$heartRate",
-            label = "BPM",
-            modifier = Modifier.weight(1f)
+        
+        // Enhanced Calories Plan Card (shows target)
+        ActivityStatCardEnhanced(
+            icon = Icons.Default.Restaurant,
+            value = "$calorieTarget",
+            label = "Calories Plan",
+            modifier = Modifier.weight(1f),
+            onClick = { showCalorieTargetDialog = true }
         )
     }
     
@@ -458,6 +483,26 @@ private fun ActivityStatsSection(
                     }
                 }
                 showStepTargetDialog = false
+            }
+        )
+    }
+    
+    // Calorie Target Dialog
+    if (showCalorieTargetDialog) {
+        CalorieTargetDialog(
+            currentTarget = calorieTarget,
+            onDismiss = { showCalorieTargetDialog = false },
+            onTargetSet = { newTarget ->
+                currentUserEmail?.let { email ->
+                    scope.launch(Dispatchers.IO) {
+                        try {
+                            userDao.updateCalorieTarget(email, newTarget)
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        }
+                    }
+                }
+                showCalorieTargetDialog = false
             }
         )
     }
@@ -488,6 +533,48 @@ private fun ActivityStatCard(
             Text(
                 text = label,
                 style = MaterialTheme.typography.bodyMedium
+            )
+        }
+    }
+}
+
+@Composable
+private fun ActivityStatCardEnhanced(
+    icon: ImageVector,
+    value: String,
+    label: String,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit = {}
+) {
+    Card(
+        modifier = modifier
+            .clickable { onClick() }
+            .shadow(4.dp, RoundedCornerShape(12.dp)),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(12.dp)
+                .heightIn(min = 100.dp), // Match StepCounterCard height approximately
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                icon, 
+                contentDescription = label,
+                modifier = Modifier.size(24.dp)
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = value,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center
+            )
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyMedium,
+                textAlign = TextAlign.Center
             )
         }
     }
@@ -803,6 +890,88 @@ private fun StepTargetDialog(
                     onValueChange = { targetText = it },
                     label = { Text("Step Target") },
                     placeholder = { Text("0000") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp)
+                )
+                
+                Spacer(modifier = Modifier.height(24.dp))
+                
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    TextButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("Cancel")
+                    }
+                    
+                    Spacer(modifier = Modifier.width(8.dp))
+                    
+                    Button(
+                        onClick = {
+                            val target = targetText.toIntOrNull()
+                            if (target != null && target > 0) {
+                                onTargetSet(target)
+                            }
+                        },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("Set Target")
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CalorieTargetDialog(
+    currentTarget: Int,
+    onDismiss: () -> Unit,
+    onTargetSet: (Int) -> Unit
+) {
+    var targetText by remember { 
+        mutableStateOf(
+            if (currentTarget == 0) "" else currentTarget.toString()
+        ) 
+    }
+    
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(24.dp)
+            ) {
+                Text(
+                    text = "Daily Calorie Goal",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                Text(
+                    text = "Set your daily calorie consumption goal",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                )
+                
+                Spacer(modifier = Modifier.height(24.dp))
+                
+                OutlinedTextField(
+                    value = targetText,
+                    onValueChange = { targetText = it },
+                    label = { Text("Calorie Target") },
+                    placeholder = { Text("2000") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,

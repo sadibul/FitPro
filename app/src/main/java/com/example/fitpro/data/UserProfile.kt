@@ -17,7 +17,8 @@ data class UserProfile(
     val dailySteps: Int = 0,
     val caloriesBurned: Int = 0,
     val heartRate: Int = 0,
-    val stepTarget: Int = 0 // Default step target is 0
+    val stepTarget: Int = 0, // Default step target is 0
+    val calorieTarget: Int = 0 // Default calorie target is 0
 ) {
     fun calculateBMI(): Float {
         return weight / ((height / 100f).pow(2))

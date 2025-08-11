@@ -4,11 +4,13 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import java.util.concurrent.Executors
 
 @Database(
     entities = [UserProfile::class, WorkoutPlan::class, MealPlan::class],
-    version = 12, // Incremented version for SQLite fix
+    version = 14, // Incremented version for calorie target
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -22,6 +24,48 @@ abstract class AppDatabase : RoomDatabase() {
         
         // Dedicated thread pool for database operations
         private val databaseExecutor = Executors.newFixedThreadPool(4)
+        
+        // Migration from version 12 to 13
+        private val MIGRATION_12_13 = object : Migration(12, 13) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                // Add new columns to workout_plans table
+                database.execSQL("ALTER TABLE workout_plans ADD COLUMN categoryId INTEGER NOT NULL DEFAULT 0")
+                database.execSQL("ALTER TABLE workout_plans ADD COLUMN categoryName TEXT NOT NULL DEFAULT ''")
+                
+                // Make targetCalories nullable by creating new table and copying data
+                database.execSQL("""
+                    CREATE TABLE workout_plans_new (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        userEmail TEXT NOT NULL,
+                        type TEXT NOT NULL,
+                        categoryId INTEGER NOT NULL DEFAULT 0,
+                        categoryName TEXT NOT NULL DEFAULT '',
+                        duration INTEGER NOT NULL,
+                        targetCalories INTEGER,
+                        createdAt INTEGER NOT NULL
+                    )
+                """)
+                
+                // Copy data from old table to new table
+                database.execSQL("""
+                    INSERT INTO workout_plans_new (id, userEmail, type, categoryId, categoryName, duration, targetCalories, createdAt)
+                    SELECT id, userEmail, type, 0, type, duration, targetCalories, createdAt
+                    FROM workout_plans
+                """)
+                
+                // Drop old table and rename new table
+                database.execSQL("DROP TABLE workout_plans")
+                database.execSQL("ALTER TABLE workout_plans_new RENAME TO workout_plans")
+            }
+        }
+
+        // Migration from version 13 to 14
+        private val MIGRATION_13_14 = object : Migration(13, 14) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                // Add calorieTarget column to user_profile table
+                database.execSQL("ALTER TABLE user_profile ADD COLUMN calorieTarget INTEGER NOT NULL DEFAULT 0")
+            }
+        }
 
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
@@ -30,11 +74,11 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "fitpro_database"
                 )
-                    .fallbackToDestructiveMigration() // Handle all migrations safely
+                    .addMigrations(MIGRATION_12_13, MIGRATION_13_14) // Add both migrations
+                    .fallbackToDestructiveMigration() // Fallback for other migrations
                     .fallbackToDestructiveMigrationOnDowngrade()
                     .setQueryExecutor(databaseExecutor) // Use dedicated executor
                     .setTransactionExecutor(databaseExecutor)
-                    // Remove callback that was causing SQLite errors
                     .build()
                 INSTANCE = instance
                 instance

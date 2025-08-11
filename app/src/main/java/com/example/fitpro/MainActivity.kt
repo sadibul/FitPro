@@ -420,7 +420,8 @@ fun MainAppWithBottomNav(
             composable(Screen.Plan.route) {
                 PlanScreen(
                     navController = navController,
-                    userProfileFlow = userProfileFlow
+                    userProfileFlow = userProfileFlow,
+                    userDao = userDao
                 )
             }
             composable(Screen.Progress.route) {
