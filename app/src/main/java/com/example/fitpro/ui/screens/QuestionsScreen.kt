@@ -13,7 +13,9 @@ import com.example.fitpro.Screen
 import com.example.fitpro.data.UserDao
 import com.example.fitpro.data.UserProfile
 import com.example.fitpro.utils.UserSession
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -132,20 +134,22 @@ fun QuestionsScreen(
                             weight = weight.toFloatOrNull() ?: 70f,
                             height = height.toIntOrNull() ?: 170
                         )
-                        userDao.insertUser(userProfile)
+                        
+                        // Insert user using IO dispatcher
+                        withContext(Dispatchers.IO) {
+                            userDao.insertUser(userProfile)
+                        }
                         
                         // Save user session with remember me enabled for new users
                         userSession.saveUserSession(userEmail, true)
                         
-                        // Ensure state update happens on main thread
-                        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                            onQuestionsComplete()
-                        }
+                        // Complete on main thread
+                        onQuestionsComplete()
+                        
                     } catch (e: Exception) {
+                        e.printStackTrace() // Add logging for debugging
                         // Handle error - still complete to avoid getting stuck
-                        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                            onQuestionsComplete()
-                        }
+                        onQuestionsComplete()
                     }
                 }
             },

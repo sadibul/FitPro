@@ -6,6 +6,10 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -17,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavController
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -54,10 +59,14 @@ class MainActivity : ComponentActivity() {
         val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
         
-        // Keep splash screen longer
-        splashScreen.setKeepOnScreenCondition { 
-            // Keep splash for at least 1 second
-            false 
+        // Keep splash screen for proper duration
+        var keepSplashScreen = true
+        splashScreen.setKeepOnScreenCondition { keepSplashScreen }
+        
+        // Hide splash screen after 1.5 seconds (reduced for better performance)
+        lifecycleScope.launch {
+            delay(1500)
+            keepSplashScreen = false
         }
 
         setContent {
@@ -70,6 +79,12 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+    
+    override fun onDestroy() {
+        super.onDestroy()
+        // Close database connections properly
+        AppDatabase.closeDatabase()
     }
 }
 
@@ -84,22 +99,63 @@ fun FitProApp() {
     var stepCounterManager by remember { mutableStateOf<StepCounterManager?>(null) }
     var isLoggedIn by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(true) }
+    var initializationComplete by remember { mutableStateOf(false) }
+    var initializationError by remember { mutableStateOf<String?>(null) }
 
-    // Initialize database asynchronously in background thread
+    // Initialize components asynchronously with proper error handling
     LaunchedEffect(Unit) {
         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
             try {
-                val database = AppDatabase.getDatabase(context)
-                userDao = database.userDao()
-                workoutPlanDao = database.workoutPlanDao()
-                mealPlanDao = database.mealPlanDao()
-                stepCounterManager = StepCounterManager(context)
-            } catch (e: Exception) {
-                // Handle database initialization error
-                e.printStackTrace()
-            } finally {
+                // Initialize database with shorter timeout
+                kotlinx.coroutines.withTimeout(5000) { // 5 second timeout
+                    val database = AppDatabase.getDatabase(context)
+                    
+                    // Initialize DAOs
+                    userDao = database.userDao()
+                    workoutPlanDao = database.workoutPlanDao()
+                    mealPlanDao = database.mealPlanDao()
+                    
+                    // Initialize step counter manager
+                    stepCounterManager = StepCounterManager(context)
+                }
+                
+                // Update UI on main thread
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
                     isLoading = false
+                    initializationComplete = true
+                    initializationError = null
+                }
+                
+            } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
+                // Handle timeout - try once more with fresh database
+                try {
+                    context.deleteDatabase("fitpro_database")
+                    delay(500) // Brief delay before retry
+                    
+                    val database = AppDatabase.getDatabase(context)
+                    userDao = database.userDao()
+                    workoutPlanDao = database.workoutPlanDao()
+                    mealPlanDao = database.mealPlanDao()
+                    stepCounterManager = StepCounterManager(context)
+                    
+                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                        isLoading = false
+                        initializationComplete = true
+                        initializationError = null
+                    }
+                } catch (retryException: Exception) {
+                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                        isLoading = false
+                        initializationComplete = false
+                        initializationError = "Database initialization failed. Please restart the app."
+                    }
+                }
+            } catch (e: Exception) {
+                // Handle other initialization errors
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    isLoading = false
+                    initializationComplete = false
+                    initializationError = "Failed to initialize app: ${e.message}"
                 }
             }
         }
@@ -107,51 +163,112 @@ fun FitProApp() {
 
     when {
         isLoading -> {
-            // Show loading screen
+            // Show loading screen during initialization
             Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
-                CircularProgressIndicator()
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    CircularProgressIndicator()
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "Starting FitPro...",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
             }
         }
-        userDao != null && workoutPlanDao != null && mealPlanDao != null && stepCounterManager != null -> {
-            val userSession = remember { UserSession(context) }
-            
-            // Check session state on startup
-            LaunchedEffect(Unit) {
-                val currentEmail = userSession.getCurrentUserEmail()
-                val shouldRemember = userSession.shouldRememberUser()
-                isLoggedIn = currentEmail != null && shouldRemember
+        
+        initializationError != null -> {
+            // Show error screen
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = initializationError!!,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Button(
+                        onClick = {
+                            // Restart initialization
+                            isLoading = true
+                            initializationError = null
+                            initializationComplete = false
+                        }
+                    ) {
+                        Text("Retry")
+                    }
+                }
             }
+        }
+        
+        initializationComplete && userDao != null && workoutPlanDao != null && mealPlanDao != null && stepCounterManager != null -> {
+            val userSession = remember { UserSession(context) }
+            var sessionChecked by remember { mutableStateOf(false) }
             
-            val currentUserEmail = userSession.getCurrentUserEmail()
-            val shouldRememberUser = userSession.shouldRememberUser()
-            val userProfileFlow = remember(currentUserEmail) { 
-                if (currentUserEmail != null) {
-                    userDao!!.getUserProfile(currentUserEmail)
-                } else {
-                    kotlinx.coroutines.flow.flowOf(null)
+            // Check session state on startup with background thread
+            LaunchedEffect(Unit) {
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    delay(300) // Brief delay for UI stability
+                    val currentEmail = userSession.getCurrentUserEmail()
+                    val shouldRemember = userSession.shouldRememberUser()
+                    
+                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                        isLoggedIn = currentEmail != null && shouldRemember
+                        sessionChecked = true
+                    }
                 }
             }
             
-            // Show main app if user is logged in or should be remembered
-            if (isLoggedIn || (shouldRememberUser && currentUserEmail != null)) {
-                MainAppWithBottomNav(
-                    userDao = userDao!!,
-                    workoutPlanDao = workoutPlanDao!!,
-                    mealPlanDao = mealPlanDao!!,
-                    stepCounterManager = stepCounterManager!!,
-                    userProfileFlow = userProfileFlow,
-                    userSession = userSession
-                )
+            if (!sessionChecked) {
+                // Show minimal loading while checking session
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(modifier = Modifier.size(32.dp))
+                }
             } else {
-                AuthNavigation(
-                    navController = navController,
-                    userDao = userDao!!,
-                    userSession = userSession,
-                    onLoginSuccess = { isLoggedIn = true }
-                )
+                val currentUserEmail = userSession.getCurrentUserEmail()
+                val shouldRememberUser = userSession.shouldRememberUser()
+                val userProfileFlow = remember(currentUserEmail) { 
+                    if (currentUserEmail != null) {
+                        userDao!!.getUserProfile(currentUserEmail)
+                    } else {
+                        kotlinx.coroutines.flow.flowOf(null)
+                    }
+                }
+                
+                // Show main app if user is logged in or should be remembered
+                if (isLoggedIn || (shouldRememberUser && currentUserEmail != null)) {
+                    MainAppWithBottomNav(
+                        userDao = userDao!!,
+                        workoutPlanDao = workoutPlanDao!!,
+                        mealPlanDao = mealPlanDao!!,
+                        stepCounterManager = stepCounterManager!!,
+                        userProfileFlow = userProfileFlow,
+                        userSession = userSession,
+                        onLogout = { 
+                            // Handle logout by updating the login state
+                            isLoggedIn = false
+                        }
+                    )
+                } else {
+                    AuthNavigation(
+                        navController = navController,
+                        userDao = userDao!!,
+                        userSession = userSession,
+                        onLoginSuccess = { isLoggedIn = true }
+                    )
+                }
             }
         }
         else -> {
@@ -217,7 +334,8 @@ fun MainAppWithBottomNav(
     mealPlanDao: MealPlanDao,
     stepCounterManager: StepCounterManager,
     userProfileFlow: kotlinx.coroutines.flow.Flow<com.example.fitpro.data.UserProfile?>,
-    userSession: UserSession
+    userSession: UserSession,
+    onLogout: () -> Unit
 ) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -263,12 +381,14 @@ fun MainAppWithBottomNav(
                         label = { Text(item.label) },
                         selected = currentDestination?.hierarchy?.any { it.route == item.route } == true,
                         onClick = {
-                            navController.navigate(item.route) {
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = true
+                            if (currentDestination?.route != item.route) {
+                                navController.navigate(item.route) {
+                                    popUpTo(navController.graph.findStartDestination().id) {
+                                        saveState = true
+                                    }
+                                    launchSingleTop = true
+                                    restoreState = true
                                 }
-                                launchSingleTop = true
-                                restoreState = true
                             }
                         },
                         colors = NavigationBarItemDefaults.colors(
@@ -281,11 +401,12 @@ fun MainAppWithBottomNav(
             }
         }
     ) { paddingValues ->
-        NavHost(
-            navController = navController,
-            startDestination = Screen.Home.route,
-            modifier = Modifier.padding(paddingValues)
-        ) {
+        key(userSession.getCurrentUserEmail()) { // Add key to reset navigation state
+            NavHost(
+                navController = navController,
+                startDestination = Screen.Home.route,
+                modifier = Modifier.padding(paddingValues)
+            ) {
             composable(Screen.Home.route) {
                 HomeScreen(
                     navController = navController,
@@ -317,14 +438,13 @@ fun MainAppWithBottomNav(
                         navController = navController,
                         userDao = userDao,
                         currentUserEmail = currentUserEmail,
-                        userSession = userSession
+                        userSession = userSession,
+                        onLogout = onLogout
                     )
                 } else {
-                    // If no user logged in, navigate to login
+                    // If no user logged in, trigger logout
                     LaunchedEffect(Unit) {
-                        navController.navigate(Screen.Login.route) {
-                            popUpTo(0) { inclusive = true }
-                        }
+                        onLogout()
                     }
                 }
             }
@@ -349,6 +469,7 @@ fun MainAppWithBottomNav(
                 )
             }
         }
+        } // Close key block
     }
 }
 

@@ -27,7 +27,10 @@ import com.example.fitpro.Screen
 import com.example.fitpro.data.UserDao
 import com.example.fitpro.data.UserProfile
 import com.example.fitpro.utils.UserSession
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -36,7 +39,8 @@ fun AccountScreen(
     navController: NavController,
     userDao: UserDao,
     currentUserEmail: String,
-    userSession: UserSession
+    userSession: UserSession,
+    onLogout: () -> Unit
 ) {
     val userFlow: Flow<UserProfile?> = remember(currentUserEmail) {
         userDao.getUserProfile(currentUserEmail)
@@ -71,9 +75,7 @@ fun AccountScreen(
         SettingsOptionsCard(
             onLogoutClick = {
                 userSession.logout()
-                navController.navigate(Screen.Login.route) {
-                    popUpTo(0) { inclusive = true }
-                }
+                onLogout() // Use the callback instead of navController
             }
         )
         
@@ -87,9 +89,18 @@ fun AccountScreen(
             userProfile = userProfile,
             onDismiss = { showEditProfileDialog = false },
             onSave = { updatedProfile ->
-                coroutineScope.launch {
-                    userDao.updateUser(updatedProfile)
-                    showEditProfileDialog = false
+                coroutineScope.launch(Dispatchers.IO) {
+                    try {
+                        userDao.updateUser(updatedProfile)
+                        withContext(Dispatchers.Main) {
+                            showEditProfileDialog = false
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        withContext(Dispatchers.Main) {
+                            showEditProfileDialog = false
+                        }
+                    }
                 }
             }
         )
@@ -102,14 +113,23 @@ fun AccountScreen(
             onDismiss = { showUpdateStatsDialog = false },
             onSave = { weight, height, age ->
                 userProfile?.let { profile ->
-                    coroutineScope.launch {
-                        val updatedProfile = profile.copy(
-                            weight = weight,
-                            height = height,
-                            age = age
-                        )
-                        userDao.updateUser(updatedProfile)
-                        showUpdateStatsDialog = false
+                    coroutineScope.launch(Dispatchers.IO) {
+                        try {
+                            val updatedProfile = profile.copy(
+                                weight = weight,
+                                height = height,
+                                age = age
+                            )
+                            userDao.updateUser(updatedProfile)
+                            withContext(Dispatchers.Main) {
+                                showUpdateStatsDialog = false
+                            }
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                            withContext(Dispatchers.Main) {
+                                showUpdateStatsDialog = false
+                            }
+                        }
                     }
                 }
             }

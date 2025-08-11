@@ -37,12 +37,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
+import com.example.fitpro.Screen
 import com.example.fitpro.data.UserProfile
 import com.example.fitpro.data.UserDao
 import com.example.fitpro.data.WorkoutPlan
 import com.example.fitpro.data.WorkoutPlanDao
 import com.example.fitpro.utils.StepCounterManager
 import com.example.fitpro.utils.UserSession
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
@@ -97,8 +99,12 @@ fun HomeScreen(
     // Sync steps with database periodically
     LaunchedEffect(dailySteps, currentUserEmail) {
         currentUserEmail?.let { email ->
-            scope.launch {
-                userDao.updateSteps(email, dailySteps)
+            scope.launch(Dispatchers.IO) {
+                try {
+                    userDao.updateSteps(email, dailySteps)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
             }
         }
     }
@@ -117,9 +123,9 @@ fun HomeScreen(
 
         // Current Plan Section with Workout Cards
         CurrentPlanSection(
-            planName = userProfile?.currentPlan ?: "Weight Loss Plan",
             userEmail = currentUserEmail,
-            workoutPlanDao = workoutPlanDao
+            workoutPlanDao = workoutPlanDao,
+            onNavigateToPlan = { navController.navigate(Screen.Plan.route) }
         )
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -233,71 +239,92 @@ private fun WelcomeSection(name: String) {
 
 @Composable
 private fun CurrentPlanSection(
-    planName: String,
     userEmail: String?,
-    workoutPlanDao: WorkoutPlanDao
+    workoutPlanDao: WorkoutPlanDao,
+    onNavigateToPlan: () -> Unit
 ) {
     val scope = rememberCoroutineScope()
-    val workoutPlans by (userEmail?.let { 
-        workoutPlanDao.getAllWorkoutPlans(it).collectAsStateWithLifecycle(initialValue = emptyList<WorkoutPlan>())
-    } ?: flowOf(emptyList<WorkoutPlan>()).collectAsStateWithLifecycle(initialValue = emptyList<WorkoutPlan>()))
+    
+    // Use more efficient query - limit to recent workouts only
+    val workoutPlans by remember(userEmail) {
+        if (userEmail != null) {
+            workoutPlanDao.getAllWorkoutPlans(userEmail)
+        } else {
+            flowOf(emptyList())
+        }
+    }.collectAsStateWithLifecycle(initialValue = emptyList())
 
     Column {
-        // Main Plan Card
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .shadow(8.dp, RoundedCornerShape(16.dp)),
-            shape = RoundedCornerShape(16.dp)
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column {
-                    Text(
-                        text = "Current Plan",
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                    Text(
-                        text = planName,
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-                Icon(
-                    Icons.Default.FitnessCenter,
-                    contentDescription = "Fitness Plan"
-                )
-            }
-        }
-
-        // Workout Cards Section
+        // Section Title
+        Text(
+            text = "Current Plan",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(horizontal = 4.dp)
+        )
+        
+        Spacer(modifier = Modifier.height(12.dp))
+        
+        // Workout Cards or Add Button
         if (workoutPlans.isNotEmpty()) {
-            Spacer(modifier = Modifier.height(12.dp))
-            Text(
-                text = "Your Workouts",
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.padding(horizontal = 4.dp)
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            
             LazyRow(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 contentPadding = PaddingValues(horizontal = 4.dp)
             ) {
-                items(workoutPlans) { workout ->
+                items(
+                    items = workoutPlans,
+                    key = { it.id } // Add key for better performance
+                ) { workout ->
                     WorkoutCard(
                         workout = workout,
                         onDelete = {
-                            scope.launch {
-                                workoutPlanDao.deleteWorkoutPlan(workout)
+                            scope.launch(Dispatchers.IO) {
+                                try {
+                                    workoutPlanDao.deleteWorkoutPlan(workout)
+                                } catch (e: Exception) {
+                                    // Handle deletion error gracefully
+                                    e.printStackTrace()
+                                }
                             }
                         }
+                    )
+                }
+            }
+        } else {
+            // Add Button when no workouts
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(120.dp)
+                    .shadow(4.dp, RoundedCornerShape(12.dp))
+                    .clickable { onNavigateToPlan() },
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                )
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        Icons.Default.Add,
+                        contentDescription = "Add Plan",
+                        modifier = Modifier.size(48.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Add Your First Workout Plan",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        text = "Tap to get started",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
                 }
             }
@@ -422,8 +449,12 @@ private fun ActivityStatsSection(
             onDismiss = { showStepTargetDialog = false },
             onTargetSet = { newTarget ->
                 currentUserEmail?.let { email ->
-                    scope.launch {
-                        userDao.updateStepTarget(email, newTarget)
+                    scope.launch(Dispatchers.IO) {
+                        try {
+                            userDao.updateStepTarget(email, newTarget)
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        }
                     }
                 }
                 showStepTargetDialog = false

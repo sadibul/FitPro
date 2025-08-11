@@ -12,7 +12,9 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.fitpro.Screen
 import com.example.fitpro.data.UserDao
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -124,8 +126,12 @@ fun SignUpScreen(
                         errorMessage = ""
                         
                         try {
-                            // Check if user already exists
-                            if (userDao.userExists(email.trim())) {
+                            // Check if user already exists using IO dispatcher
+                            val userExists = withContext(Dispatchers.IO) {
+                                userDao.userExists(email.trim())
+                            }
+                            
+                            if (userExists) {
                                 errorMessage = "Email already exists. Please use a different email or try logging in."
                             } else {
                                 // Email is available, proceed to questions
@@ -133,6 +139,7 @@ fun SignUpScreen(
                             }
                         } catch (e: Exception) {
                             errorMessage = "Sign up failed. Please try again."
+                            e.printStackTrace() // Add logging to help debug
                         } finally {
                             isLoading = false
                         }

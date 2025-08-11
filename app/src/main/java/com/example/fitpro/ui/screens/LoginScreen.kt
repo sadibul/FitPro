@@ -17,7 +17,9 @@ import androidx.navigation.NavController
 import com.example.fitpro.Screen
 import com.example.fitpro.data.UserDao
 import com.example.fitpro.utils.UserSession
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -145,15 +147,22 @@ fun LoginScreen(
                         errorMessage = ""
                         
                         try {
-                            // Authenticate user against database
-                            val user = userDao.authenticateUser(email.trim(), password)
+                            // Authenticate user against database using IO dispatcher
+                            val user = withContext(Dispatchers.IO) {
+                                userDao.authenticateUser(email.trim(), password)
+                            }
+                            
                             if (user != null) {
                                 // Login successful
                                 userSession.saveUserSession(email.trim(), rememberMe)
                                 onLoginSuccess()
                             } else {
                                 // Check if user exists but wrong password
-                                if (userDao.userExists(email.trim())) {
+                                val userExists = withContext(Dispatchers.IO) {
+                                    userDao.userExists(email.trim())
+                                }
+                                
+                                if (userExists) {
                                     errorMessage = "Incorrect password. Please try again."
                                 } else {
                                     errorMessage = "Account not found. Please sign up first."
@@ -161,6 +170,7 @@ fun LoginScreen(
                             }
                         } catch (e: Exception) {
                             errorMessage = "Login failed. Please try again."
+                            e.printStackTrace() // Add logging for debugging
                         } finally {
                             isLoading = false
                         }
