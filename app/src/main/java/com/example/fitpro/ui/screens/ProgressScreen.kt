@@ -21,12 +21,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.example.fitpro.data.*
 import com.example.fitpro.ui.theme.ChartBlue
 import com.example.fitpro.utils.UserSession
 import kotlinx.coroutines.flow.Flow
+import java.text.SimpleDateFormat
+import java.util.Locale
+import java.util.TimeZone
 import kotlinx.coroutines.flow.flowOf
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -43,10 +47,6 @@ fun ProgressScreen(
     val currentUserEmail = userSession.getCurrentUserEmail()
     
     val userProfile by userProfileFlow.collectAsStateWithLifecycle(initialValue = null)
-    
-    val weeklyWorkouts by (currentUserEmail?.let {
-        workoutPlanDao.getWeeklyWorkoutCount(it).collectAsStateWithLifecycle(initialValue = 0)
-    } ?: flowOf(0).collectAsStateWithLifecycle(initialValue = 0))
     
     // Get completed workouts for chart data
     val completedWorkouts by (currentUserEmail?.let {
@@ -82,21 +82,63 @@ fun ProgressScreen(
                 )
             }
 
-            // Weekly Statistics Chart
+            // Steps Chart
             item {
-                WeeklyStatsChart(
-                    completedWorkouts = completedWorkouts,
-                    allMealPlans = allMealPlans,
-                    userProfile = userProfile
+                val weeklyData = remember(completedWorkouts, allMealPlans, userProfile) {
+                    generateWeeklyData(completedWorkouts, allMealPlans, userProfile)
+                }
+                SandowScoreChart(
+                    title = "Steps",
+                    data = weeklyData.map { it.steps },
+                    maxValue = 15000f,
+                    yAxisLabels = listOf("0", "5K", "10K", "15K"),
+                    color = MaterialTheme.colorScheme.primary,
+                    selectedPeriod = "Weekly"
                 )
             }
 
-            // Achievement Section
+            // Calories Burn Chart
             item {
-                AchievementsCard(
-                    weeklyWorkouts = weeklyWorkouts,
-                    dailySteps = userProfile?.dailySteps ?: 0,
-                    weeklyCaloriesBurned = userProfile?.caloriesBurned?.times(7) ?: 0
+                val weeklyData = remember(completedWorkouts, allMealPlans, userProfile) {
+                    generateWeeklyData(completedWorkouts, allMealPlans, userProfile)
+                }
+                SandowScoreChart(
+                    title = "Calories Burn",
+                    data = weeklyData.map { it.caloriesBurned },
+                    maxValue = 3000f,
+                    yAxisLabels = listOf("0", "1K", "2K", "3K"),
+                    color = MaterialTheme.colorScheme.error,
+                    selectedPeriod = "Weekly"
+                )
+            }
+
+            // Calories Consume Chart
+            item {
+                val weeklyData = remember(completedWorkouts, allMealPlans, userProfile) {
+                    generateWeeklyData(completedWorkouts, allMealPlans, userProfile)
+                }
+                SandowScoreChart(
+                    title = "Calories Consume",
+                    data = weeklyData.map { it.caloriesConsumed },
+                    maxValue = 3000f,
+                    yAxisLabels = listOf("0", "1K", "2K", "3K"),
+                    color = MaterialTheme.colorScheme.secondary,
+                    selectedPeriod = "Weekly"
+                )
+            }
+
+            // Workout Chart (in minutes)
+            item {
+                val weeklyData = remember(completedWorkouts, allMealPlans, userProfile) {
+                    generateWeeklyData(completedWorkouts, allMealPlans, userProfile)
+                }
+                SandowScoreChart(
+                    title = "Workout",
+                    data = weeklyData.map { it.workouts.toFloat() * 30 }, // Convert to minutes (assuming 30 min per workout)
+                    maxValue = 200f,
+                    yAxisLabels = listOf("0", "50", "100", "150", "200"),
+                    color = MaterialTheme.colorScheme.tertiary,
+                    selectedPeriod = "Weekly"
                 )
             }
         }
@@ -613,167 +655,222 @@ private fun ProgressScreenContent(
 }
 
 @Composable
-private fun WeeklyStatsChart(
-    completedWorkouts: List<CompletedWorkout>,
-    allMealPlans: List<MealPlan>,
-    userProfile: UserProfile?
+private fun SandowScoreChart(
+    title: String,
+    data: List<Float>,
+    maxValue: Float,
+    yAxisLabels: List<String>,
+    color: Color,
+    selectedPeriod: String
 ) {
+    var showDropdown by remember { mutableStateOf(false) }
+    val periods = listOf("Daily", "Weekly", "Monthly")
+    var currentPeriod by remember { mutableStateOf(selectedPeriod) }
+    
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .shadow(4.dp, RoundedCornerShape(16.dp)),
-        shape = RoundedCornerShape(16.dp)
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
         Column(
-            modifier = Modifier.padding(16.dp)
+            modifier = Modifier.padding(20.dp)
         ) {
-            // Tab selector
-            var selectedTab by remember { mutableStateOf(0) }
-            val tabs = listOf("Calories Burn", "Calories Consume", "Workouts")
-            
+            // Header with title and dropdown
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                tabs.forEachIndexed { index, tab ->
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Add,
+                        contentDescription = null,
+                        tint = Color(0xFFFF6B35),
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Black
+                    )
+                }
+                
+                // Dropdown selector
+                Box {
                     Card(
-                        modifier = Modifier
-                            .weight(1f)
-                            .clickable { selectedTab = index },
+                        modifier = Modifier.clickable { showDropdown = true },
                         colors = CardDefaults.cardColors(
-                            containerColor = if (selectedTab == index) 
-                                MaterialTheme.colorScheme.primary 
-                            else 
-                                MaterialTheme.colorScheme.surfaceVariant
+                            containerColor = Color(0xFFF5F5F5)
                         ),
-                        shape = RoundedCornerShape(20.dp)
+                        shape = RoundedCornerShape(8.dp)
                     ) {
-                        Text(
-                            text = tab,
-                            modifier = Modifier.padding(12.dp),
-                            textAlign = TextAlign.Center,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = if (selectedTab == index) 
-                                MaterialTheme.colorScheme.onPrimary 
-                            else 
-                                MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Normal
-                        )
+                        Row(
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.CalendarMonth,
+                                contentDescription = null,
+                                tint = Color.Gray,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Text(
+                                text = currentPeriod,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color.Gray
+                            )
+                            Icon(
+                                Icons.Default.KeyboardArrowDown,
+                                contentDescription = null,
+                                tint = Color.Gray,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
+                    
+                    DropdownMenu(
+                        expanded = showDropdown,
+                        onDismissRequest = { showDropdown = false }
+                    ) {
+                        periods.forEach { period ->
+                            DropdownMenuItem(
+                                text = { Text(period) },
+                                onClick = {
+                                    currentPeriod = period
+                                    showDropdown = false
+                                }
+                            )
+                        }
                     }
                 }
             }
             
-            // Generate weekly data
-            val weeklyData = remember(completedWorkouts, allMealPlans, userProfile) {
-                generateWeeklyData(completedWorkouts, allMealPlans, userProfile)
-            }
+            Spacer(modifier = Modifier.height(24.dp))
             
-            // Chart content
-            when (selectedTab) {
-                0 -> WeeklyBarChart(
-                    data = weeklyData.map { it.caloriesBurned },
-                    title = "${(weeklyData.sumOf { it.caloriesBurned.toDouble() } / 7).toInt()} calories on average",
-                    subtitle = "this week",
-                    maxValue = weeklyData.maxOfOrNull { it.caloriesBurned } ?: 1000f,
-                    color = MaterialTheme.colorScheme.error
-                )
-                1 -> WeeklyBarChart(
-                    data = weeklyData.map { it.caloriesConsumed },
-                    title = "${(weeklyData.sumOf { it.caloriesConsumed.toDouble() } / 7).toInt()} calories on average",
-                    subtitle = "this week",
-                    maxValue = weeklyData.maxOfOrNull { it.caloriesConsumed } ?: 2000f,
-                    color = MaterialTheme.colorScheme.secondary
-                )
-                2 -> WeeklyBarChart(
-                    data = weeklyData.map { it.workouts.toFloat() },
-                    title = "${weeklyData.sumOf { it.workouts }} workouts",
-                    subtitle = "this week",
-                    maxValue = weeklyData.maxOfOrNull { it.workouts.toFloat() } ?: 3f,
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun WeeklyBarChart(
-    data: List<Float>,
-    title: String,
-    subtitle: String,
-    maxValue: Float,
-    color: Color
-) {
-    Column {
-        // Title and subtitle
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            Icon(
-                Icons.Default.KeyboardArrowDown,
-                contentDescription = "Dropdown",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-        
-        Spacer(modifier = Modifier.height(24.dp))
-        
-        // Bar chart
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(120.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.Bottom
-        ) {
-            val days = listOf("S", "M", "T", "W", "T", "F", "S")
-            
-            data.forEachIndexed { index, value ->
+            // Chart with Y-axis labels and bars
+            Row(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                // Y-axis labels
                 Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.width(40.dp),
+                    verticalArrangement = Arrangement.SpaceBetween
+                ) {
+                    yAxisLabels.reversed().forEach { label ->
+                        Text(
+                            text = label,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.Gray,
+                            modifier = Modifier.height(20.dp)
+                        )
+                    }
+                }
+                
+                Spacer(modifier = Modifier.width(16.dp))
+                
+                // Chart area
+                Column(
                     modifier = Modifier.weight(1f)
                 ) {
-                    // Bar
-                    val height = if (maxValue > 0) (value / maxValue * 80).dp else 4.dp
-                    Card(
+                    // Grid lines and bars
+                    Box(
                         modifier = Modifier
-                            .width(24.dp)
-                            .height(maxOf(height, 4.dp)),
-                        colors = CardDefaults.cardColors(
-                            containerColor = color.copy(alpha = 0.8f)
-                        ),
-                        shape = RoundedCornerShape(
-                            topStart = 8.dp,
-                            topEnd = 8.dp,
-                            bottomStart = 4.dp,
-                            bottomEnd = 4.dp
-                        )
-                    ) {}
-                    
-                    Spacer(modifier = Modifier.height(8.dp))
-                    
-                    // Day label
-                    Text(
-                        text = days.getOrNull(index) ?: "",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                            .fillMaxWidth()
+                            .height(200.dp)
+                    ) {
+                        // Grid lines
+                        Canvas(
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            val gridColor = Color.LightGray.copy(alpha = 0.3f)
+                            val gridLines = yAxisLabels.size
+                            
+                            for (i in 0 until gridLines) {
+                                val y = size.height * (i.toFloat() / (gridLines - 1))
+                                drawLine(
+                                    color = gridColor,
+                                    start = Offset(0f, y),
+                                    end = Offset(size.width, y),
+                                    strokeWidth = 1.dp.toPx()
+                                )
+                            }
+                        }
+                        
+                        // Bars
+                        Row(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(vertical = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceEvenly,
+                            verticalAlignment = Alignment.Bottom
+                        ) {
+                            val days = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+                            val maxDataValue = data.maxOrNull() ?: 1f
+                            val currentMaxValue = maxOf(maxDataValue, maxValue * 0.3f) // Ensure some minimum scale
+                            
+                            data.forEachIndexed { index, value ->
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    // Highlight bar (Tuesday is highlighted in your image)
+                                    val isHighlighted = index == 1 // Tuesday
+                                    val barHeight = (value / currentMaxValue * 160).dp
+                                    val barColor = if (isHighlighted) Color.Black else Color.LightGray
+                                    
+                                    // Value label on highlighted bar
+                                    if (isHighlighted && value > 0) {
+                                        Card(
+                                            colors = CardDefaults.cardColors(
+                                                containerColor = Color.Black
+                                            ),
+                                            shape = RoundedCornerShape(4.dp)
+                                        ) {
+                                            Text(
+                                                text = value.toInt().toString(),
+                                                color = Color.White,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                    }
+                                    
+                                    // Bar
+                                    Card(
+                                        modifier = Modifier
+                                            .width(20.dp)
+                                            .height(maxOf(barHeight, 8.dp)),
+                                        colors = CardDefaults.cardColors(
+                                            containerColor = barColor
+                                        ),
+                                        shape = RoundedCornerShape(
+                                            topStart = 4.dp,
+                                            topEnd = 4.dp,
+                                            bottomStart = 2.dp,
+                                            bottomEnd = 2.dp
+                                        )
+                                    ) {}
+                                    
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    
+                                    // Day label
+                                    Text(
+                                        text = days.getOrNull(index) ?: "",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = Color.Gray
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -782,6 +879,7 @@ private fun WeeklyBarChart(
 
 // Data class for weekly statistics
 data class DayData(
+    val steps: Float,
     val caloriesBurned: Float,
     val caloriesConsumed: Float,
     val workouts: Int
@@ -795,6 +893,9 @@ private fun generateWeeklyData(
 ): List<DayData> {
     val calendar = java.util.Calendar.getInstance()
     
+    // Set timezone to Bangladesh (UTC+6)
+    calendar.timeZone = TimeZone.getTimeZone("Asia/Dhaka")
+    
     // Get start of current week (Sunday)
     calendar.firstDayOfWeek = java.util.Calendar.SUNDAY
     calendar.set(java.util.Calendar.DAY_OF_WEEK, java.util.Calendar.SUNDAY)
@@ -802,6 +903,10 @@ private fun generateWeeklyData(
     calendar.set(java.util.Calendar.MINUTE, 0)
     calendar.set(java.util.Calendar.SECOND, 0)
     calendar.set(java.util.Calendar.MILLISECOND, 0)
+    
+    // Get current day of week in Bangladesh timezone
+    val currentCalendar = java.util.Calendar.getInstance(TimeZone.getTimeZone("Asia/Dhaka"))
+    val currentDayOfWeek = currentCalendar.get(java.util.Calendar.DAY_OF_WEEK)
     
     val weeklyData = mutableListOf<DayData>()
     
@@ -823,59 +928,40 @@ private fun generateWeeklyData(
             }
             .sumOf { (it.targetCalories ?: 0).toLong() }
         
-        // For meal plans, since createdAt is a String, we'll use a simpler approach
-        // and distribute meal plans across the week or use completed status
-        val dayCaloriesConsumed = if (dayIndex < allMealPlans.size) {
-            allMealPlans.getOrNull(dayIndex)?.let { if (it.isCompleted) it.totalCalories else 0 } ?: 0
+        // For meal plans, calculate calories consumed for this day
+        val dayCaloriesConsumed = allMealPlans
+            .filter { mealPlan ->
+                // Check if meal plan was completed on this day
+                mealPlan.isCompleted && try {
+                    val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                    dateFormat.timeZone = TimeZone.getTimeZone("Asia/Dhaka")
+                    val mealPlanDate = dateFormat.parse(mealPlan.createdAt)?.time ?: 0L
+                    mealPlanDate >= dayStartTime && mealPlanDate < dayEndTime
+                } catch (e: Exception) {
+                    false
+                }
+            }
+            .sumOf { it.totalCalories }
+        
+        // Calculate actual steps for this day
+        // For current day, use the dailySteps from userProfile
+        // For other days, we don't have historical data yet, so show 0
+        val actualSteps = if (dayIndex == (currentDayOfWeek - 1)) { // Convert Sunday=1 to Sunday=0 indexing
+            (userProfile?.dailySteps ?: 0).toFloat()
         } else {
-            0
+            0f // No historical step data available for other days
         }
         
-        // Add some sample data if no real data exists for better visualization
-        val sampleCaloriesBurned = if (dayCaloriesBurned == 0L && completedWorkouts.isEmpty()) {
-            when (dayIndex) {
-                0 -> 300f // Sunday
-                1 -> 150f // Monday
-                2 -> 450f // Tuesday
-                3 -> 200f // Wednesday
-                4 -> 100f // Thursday
-                5 -> 380f // Friday
-                6 -> 250f // Saturday
-                else -> 0f
-            }
-        } else dayCaloriesBurned.toFloat()
-        
-        val sampleCaloriesConsumed = if (dayCaloriesConsumed == 0 && allMealPlans.isEmpty()) {
-            when (dayIndex) {
-                0 -> 1800f // Sunday
-                1 -> 1600f // Monday
-                2 -> 2100f // Tuesday
-                3 -> 1900f // Wednesday
-                4 -> 1500f // Thursday
-                5 -> 2200f // Friday
-                6 -> 1750f // Saturday
-                else -> 0f
-            }
-        } else dayCaloriesConsumed.toFloat()
-        
-        val sampleWorkouts = if (dayWorkouts == 0 && completedWorkouts.isEmpty()) {
-            when (dayIndex) {
-                0 -> 0 // Sunday - rest day
-                1 -> 1 // Monday
-                2 -> 2 // Tuesday
-                3 -> 1 // Wednesday
-                4 -> 0 // Thursday - rest day
-                5 -> 2 // Friday
-                6 -> 1 // Saturday
-                else -> 0
-            }
-        } else dayWorkouts
+        val actualCaloriesBurned = dayCaloriesBurned.toFloat()
+        val actualCaloriesConsumed = dayCaloriesConsumed.toFloat()
+        val actualWorkouts = dayWorkouts
         
         weeklyData.add(
             DayData(
-                caloriesBurned = sampleCaloriesBurned,
-                caloriesConsumed = sampleCaloriesConsumed,
-                workouts = sampleWorkouts
+                steps = actualSteps,
+                caloriesBurned = actualCaloriesBurned,
+                caloriesConsumed = actualCaloriesConsumed,
+                workouts = actualWorkouts
             )
         )
         
