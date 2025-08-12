@@ -37,8 +37,6 @@ fun MealPlanScreen(
     var breakfastCalories by remember { mutableStateOf(400f) }
     var lunchCalories by remember { mutableStateOf(600f) }
     var dinnerCalories by remember { mutableStateOf(500f) }
-    var showCompletionDialog by remember { mutableStateOf(false) }
-    var createdMealPlan by remember { mutableStateOf<MealPlan?>(null) }
     val coroutineScope = rememberCoroutineScope()
     
     // Get current meal plan status
@@ -156,10 +154,9 @@ fun MealPlanScreen(
                                 
                                 // Update user's calorie target
                                 userDao.updateCalorieTarget(currentUser.email, totalCalories)
-                                
-                                createdMealPlan = mealPlan
                             }
-                            showCompletionDialog = true
+                            // Navigate back to home after creating meal plan
+                            navController.navigateUp()
                         }
                     },
                     modifier = Modifier
@@ -173,141 +170,6 @@ fun MealPlanScreen(
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Medium
                     )
-                }
-            }
-
-            // Show current meal plan status if exists
-            currentMealPlan?.let { mealPlan ->
-                item {
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .shadow(4.dp, RoundedCornerShape(12.dp)),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = if (mealPlan.isCompleted) 
-                                MaterialTheme.colorScheme.primaryContainer
-                            else 
-                                MaterialTheme.colorScheme.secondaryContainer
-                        )
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(16.dp)
-                        ) {
-                            Text(
-                                text = "Current Meal Plan",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
-                            )
-                            
-                            Spacer(modifier = Modifier.height(8.dp))
-                            
-                            Text(
-                                text = "Target: ${mealPlan.totalCalories} calories",
-                                style = MaterialTheme.typography.bodyLarge
-                            )
-                            
-                            Text(
-                                text = "Status: ${if (mealPlan.isCompleted) "Completed" else "In Progress"}",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = if (mealPlan.isCompleted) 
-                                    MaterialTheme.colorScheme.primary
-                                else 
-                                    MaterialTheme.colorScheme.secondary
-                            )
-                            
-                            if (!mealPlan.isCompleted) {
-                                Spacer(modifier = Modifier.height(12.dp))
-                                
-                                Button(
-                                    onClick = {
-                                        coroutineScope.launch {
-                                            withContext(Dispatchers.IO) {
-                                                mealPlanDao.updateMealPlanCompletion(mealPlan.id, true)
-                                            }
-                                        }
-                                    },
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Text("Mark as Complete")
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    // Completion Dialog
-    if (showCompletionDialog) {
-        Dialog(onDismissRequest = { showCompletionDialog = false }) {
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                shape = RoundedCornerShape(16.dp)
-            ) {
-                Column(
-                    modifier = Modifier.padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Icon(
-                        Icons.Default.CheckCircle,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(48.dp)
-                    )
-                    
-                    Spacer(modifier = Modifier.height(16.dp))
-                    
-                    Text(
-                        text = "Meal Plan Created!",
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold
-                    )
-                    
-                    Spacer(modifier = Modifier.height(8.dp))
-                    
-                    Text(
-                        text = "Do you want to mark it as Complete?",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    
-                    Spacer(modifier = Modifier.height(24.dp))
-                    
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        OutlinedButton(
-                            onClick = {
-                                showCompletionDialog = false
-                                navController.navigateUp()
-                            },
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text("Later")
-                        }
-                        
-                        Button(
-                            onClick = {
-                                createdMealPlan?.let { mealPlan ->
-                                    coroutineScope.launch {
-                                        withContext(Dispatchers.IO) {
-                                            mealPlanDao.updateMealPlanCompletion(mealPlan.id, true)
-                                        }
-                                        showCompletionDialog = false
-                                        navController.navigateUp()
-                                    }
-                                }
-                            },
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text("Done")
-                        }
-                    }
                 }
             }
         }

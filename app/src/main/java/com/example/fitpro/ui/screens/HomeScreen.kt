@@ -35,6 +35,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.example.fitpro.Screen
@@ -148,7 +149,8 @@ fun HomeScreen(
             currentUserEmail = currentUserEmail,
             calorieTarget = userProfile?.calorieTarget ?: 0,
             currentMealPlan = currentMealPlan,
-            navController = navController
+            navController = navController,
+            mealPlanDao = mealPlanDao
         )
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -439,10 +441,11 @@ private fun ActivityStatsSection(
     currentUserEmail: String?,
     calorieTarget: Int = 0,
     currentMealPlan: MealPlan? = null,
-    navController: NavController
+    navController: NavController,
+    mealPlanDao: MealPlanDao
 ) {
     var showStepTargetDialog by remember { mutableStateOf(false) }
-    var showCalorieTargetDialog by remember { mutableStateOf(false) }
+    var showMealPlanCompletionDialog by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     
     Row(
@@ -479,7 +482,15 @@ private fun ActivityStatsSection(
             },
             label = "Calories Plan",
             modifier = Modifier.weight(1f),
-            onClick = { navController.navigate(Screen.MealPlan.route) }
+            onClick = { 
+                // If there's an incomplete meal plan, show completion dialog
+                if (currentMealPlan != null && !currentMealPlan.isCompleted) {
+                    showMealPlanCompletionDialog = true
+                } else {
+                    // Otherwise navigate to meal plan screen
+                    navController.navigate(Screen.MealPlan.route)
+                }
+            }
         )
     }
     
@@ -503,24 +514,76 @@ private fun ActivityStatsSection(
         )
     }
     
-    // Calorie Target Dialog
-    if (showCalorieTargetDialog) {
-        CalorieTargetDialog(
-            currentTarget = calorieTarget,
-            onDismiss = { showCalorieTargetDialog = false },
-            onTargetSet = { newTarget ->
-                currentUserEmail?.let { email ->
-                    scope.launch(Dispatchers.IO) {
-                        try {
-                            userDao.updateCalorieTarget(email, newTarget)
-                        } catch (e: Exception) {
-                            e.printStackTrace()
+    // Meal Plan Completion Dialog
+    if (showMealPlanCompletionDialog && currentMealPlan != null) {
+        Dialog(onDismissRequest = { showMealPlanCompletionDialog = false }) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Icon(
+                        Icons.Default.CheckCircle,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(48.dp)
+                    )
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    Text(
+                        text = "Meal Plan Ready!",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                    
+                    Spacer(modifier = Modifier.height(8.dp))
+                    
+                    Text(
+                        text = "Do you want to mark it as Complete?",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    
+                    Spacer(modifier = Modifier.height(24.dp))
+                    
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = {
+                                showMealPlanCompletionDialog = false
+                            },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("Later")
+                        }
+                        
+                        Button(
+                            onClick = {
+                                scope.launch(Dispatchers.IO) {
+                                    try {
+                                        mealPlanDao.updateMealPlanCompletion(currentMealPlan.id, true)
+                                    } catch (e: Exception) {
+                                        e.printStackTrace()
+                                    }
+                                }
+                                showMealPlanCompletionDialog = false
+                            },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("Done")
                         }
                     }
                 }
-                showCalorieTargetDialog = false
             }
-        )
+        }
     }
 }
 
