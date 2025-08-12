@@ -437,7 +437,8 @@ fun MainAppWithBottomNav(
                     navController = navController,
                     userProfileFlow = userProfileFlow,
                     workoutPlanDao = workoutPlanDao,
-                    mealPlanDao = mealPlanDao
+                    mealPlanDao = mealPlanDao,
+                    completedWorkoutDao = completedWorkoutDao
                 )
             }
             composable(Screen.Account.route) {
