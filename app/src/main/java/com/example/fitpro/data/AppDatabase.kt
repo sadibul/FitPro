@@ -9,14 +9,15 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import java.util.concurrent.Executors
 
 @Database(
-    entities = [UserProfile::class, WorkoutPlan::class, MealPlan::class],
-    version = 15, // Incremented version for meal plan updates
+    entities = [UserProfile::class, WorkoutPlan::class, MealPlan::class, CompletedWorkout::class],
+    version = 16, // Incremented version for CompletedWorkout table
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun userDao(): UserDao
     abstract fun workoutPlanDao(): WorkoutPlanDao
     abstract fun mealPlanDao(): MealPlanDao
+    abstract fun completedWorkoutDao(): CompletedWorkoutDao
 
     companion object {
         @Volatile
@@ -98,6 +99,25 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        // Migration from version 15 to 16
+        private val MIGRATION_15_16 = object : Migration(15, 16) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                // Create completed_workouts table
+                database.execSQL("""
+                    CREATE TABLE completed_workouts (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        userEmail TEXT NOT NULL,
+                        workoutType TEXT NOT NULL,
+                        categoryName TEXT NOT NULL,
+                        duration INTEGER NOT NULL,
+                        targetCalories INTEGER,
+                        actualDuration INTEGER NOT NULL,
+                        completedAt INTEGER NOT NULL
+                    )
+                """)
+            }
+        }
+
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -105,7 +125,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "fitpro_database"
                 )
-                    .addMigrations(MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15) // Add new migration
+                    .addMigrations(MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16) // Add new migration
                     .fallbackToDestructiveMigration() // Fallback for other migrations
                     .fallbackToDestructiveMigrationOnDowngrade()
                     .setQueryExecutor(databaseExecutor) // Use dedicated executor

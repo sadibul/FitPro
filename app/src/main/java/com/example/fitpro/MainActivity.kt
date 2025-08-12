@@ -31,6 +31,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.fitpro.data.AppDatabase
+import com.example.fitpro.data.CompletedWorkoutDao
 import com.example.fitpro.data.MealPlanDao
 import com.example.fitpro.data.UserDao
 import com.example.fitpro.data.WorkoutPlanDao
@@ -96,6 +97,7 @@ fun FitProApp() {
     var userDao by remember { mutableStateOf<UserDao?>(null) }
     var workoutPlanDao by remember { mutableStateOf<WorkoutPlanDao?>(null) }
     var mealPlanDao by remember { mutableStateOf<MealPlanDao?>(null) }
+    var completedWorkoutDao by remember { mutableStateOf<CompletedWorkoutDao?>(null) }
     var stepCounterManager by remember { mutableStateOf<StepCounterManager?>(null) }
     var isLoggedIn by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(true) }
@@ -114,6 +116,7 @@ fun FitProApp() {
                     userDao = database.userDao()
                     workoutPlanDao = database.workoutPlanDao()
                     mealPlanDao = database.mealPlanDao()
+                    completedWorkoutDao = database.completedWorkoutDao()
                     
                     // Initialize step counter manager
                     stepCounterManager = StepCounterManager(context)
@@ -136,6 +139,7 @@ fun FitProApp() {
                     userDao = database.userDao()
                     workoutPlanDao = database.workoutPlanDao()
                     mealPlanDao = database.mealPlanDao()
+                    completedWorkoutDao = database.completedWorkoutDao()
                     stepCounterManager = StepCounterManager(context)
                     
                     kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
@@ -210,7 +214,7 @@ fun FitProApp() {
             }
         }
         
-        initializationComplete && userDao != null && workoutPlanDao != null && mealPlanDao != null && stepCounterManager != null -> {
+        initializationComplete && userDao != null && workoutPlanDao != null && mealPlanDao != null && completedWorkoutDao != null && stepCounterManager != null -> {
             val userSession = remember { UserSession(context) }
             var sessionChecked by remember { mutableStateOf(false) }
             
@@ -253,6 +257,7 @@ fun FitProApp() {
                         userDao = userDao!!,
                         workoutPlanDao = workoutPlanDao!!,
                         mealPlanDao = mealPlanDao!!,
+                        completedWorkoutDao = completedWorkoutDao!!,
                         stepCounterManager = stepCounterManager!!,
                         userProfileFlow = userProfileFlow,
                         userSession = userSession,
@@ -332,6 +337,7 @@ fun MainAppWithBottomNav(
     userDao: UserDao,
     workoutPlanDao: WorkoutPlanDao,
     mealPlanDao: MealPlanDao,
+    completedWorkoutDao: CompletedWorkoutDao,
     stepCounterManager: StepCounterManager,
     userProfileFlow: kotlinx.coroutines.flow.Flow<com.example.fitpro.data.UserProfile?>,
     userSession: UserSession,
@@ -414,6 +420,7 @@ fun MainAppWithBottomNav(
                     userDao = userDao,
                     workoutPlanDao = workoutPlanDao,
                     mealPlanDao = mealPlanDao,
+                    completedWorkoutDao = completedWorkoutDao,
                     stepCounterManager = stepCounterManager,
                     onBMICardClick = { navController.navigate(Screen.BMIDetails.route) }
                 )

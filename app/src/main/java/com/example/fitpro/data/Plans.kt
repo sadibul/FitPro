@@ -27,3 +27,15 @@ data class MealPlan(
     val isCompleted: Boolean = false, // Track completion status
     val createdAt: String = java.time.LocalDateTime.now().toString()
 )
+
+@Entity(tableName = "completed_workouts")
+data class CompletedWorkout(
+    @PrimaryKey(autoGenerate = true) val id: Int = 0,
+    val userEmail: String,
+    val workoutType: String,
+    val categoryName: String,
+    val duration: Int, // in minutes
+    val targetCalories: Int?, // Nullable for categories that don't use calories
+    val actualDuration: Int, // actual time spent (could be different if user stops early)
+    val completedAt: Long = System.currentTimeMillis()
+)

@@ -45,9 +45,12 @@ import com.example.fitpro.data.WorkoutPlan
 import com.example.fitpro.data.WorkoutPlanDao
 import com.example.fitpro.data.MealPlan
 import com.example.fitpro.data.MealPlanDao
+import com.example.fitpro.data.CompletedWorkoutDao
+import com.example.fitpro.data.CompletedWorkout
 import com.example.fitpro.utils.StepCounterManager
 import com.example.fitpro.utils.UserSession
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
@@ -61,6 +64,7 @@ fun HomeScreen(
     userDao: UserDao,
     workoutPlanDao: WorkoutPlanDao,
     mealPlanDao: MealPlanDao,
+    completedWorkoutDao: CompletedWorkoutDao,
     stepCounterManager: StepCounterManager,
     onBMICardClick: () -> Unit
 ) {
@@ -134,6 +138,7 @@ fun HomeScreen(
         CurrentPlanSection(
             userEmail = currentUserEmail,
             workoutPlanDao = workoutPlanDao,
+            completedWorkoutDao = completedWorkoutDao,
             onNavigateToPlan = { navController.navigate(Screen.Plan.route) }
         )
 
@@ -254,6 +259,7 @@ private fun WelcomeSection(name: String) {
 private fun CurrentPlanSection(
     userEmail: String?,
     workoutPlanDao: WorkoutPlanDao,
+    completedWorkoutDao: CompletedWorkoutDao,
     onNavigateToPlan: () -> Unit
 ) {
     val scope = rememberCoroutineScope()
@@ -290,6 +296,9 @@ private fun CurrentPlanSection(
                 ) { workout ->
                     WorkoutCard(
                         workout = workout,
+                        workoutPlanDao = workoutPlanDao,
+                        completedWorkoutDao = completedWorkoutDao,
+                        userEmail = userEmail ?: "",
                         onDelete = {
                             scope.launch(Dispatchers.IO) {
                                 try {
@@ -348,12 +357,18 @@ private fun CurrentPlanSection(
 @Composable
 private fun WorkoutCard(
     workout: WorkoutPlan,
+    workoutPlanDao: WorkoutPlanDao,
+    completedWorkoutDao: CompletedWorkoutDao,
+    userEmail: String,
     onDelete: () -> Unit
 ) {
+    var showModal by remember { mutableStateOf(false) }
+    
     Card(
         modifier = Modifier
             .width(160.dp)
-            .shadow(4.dp, RoundedCornerShape(12.dp)),
+            .shadow(4.dp, RoundedCornerShape(12.dp))
+            .clickable { showModal = true }, // Make card clickable to open modal
         shape = RoundedCornerShape(12.dp)
     ) {
         Column(
@@ -406,6 +421,278 @@ private fun WorkoutCard(
             }
         }
     }
+    
+    // Workout Action Modal
+    if (showModal) {
+        WorkoutActionModal(
+            workout = workout,
+            workoutPlanDao = workoutPlanDao,
+            completedWorkoutDao = completedWorkoutDao,
+            userEmail = userEmail,
+            onDismiss = { showModal = false }
+        )
+    }
+}
+
+@Composable
+private fun WorkoutActionModal(
+    workout: WorkoutPlan,
+    workoutPlanDao: WorkoutPlanDao,
+    completedWorkoutDao: CompletedWorkoutDao,
+    userEmail: String,
+    onDismiss: () -> Unit
+) {
+    val scope = rememberCoroutineScope()
+    var timerState by remember { mutableStateOf<TimerState>(TimerState.Idle) }
+    var remainingTime by remember { mutableStateOf(workout.duration * 60) } // Convert minutes to seconds
+    
+    // Timer logic
+    LaunchedEffect(timerState) {
+        if (timerState == TimerState.Running) {
+            while (remainingTime > 0 && timerState == TimerState.Running) {
+                delay(1000)
+                remainingTime--
+            }
+            if (remainingTime <= 0) {
+                timerState = TimerState.TimeUp
+            }
+        }
+    }
+    
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // Workout Info
+                Icon(
+                    imageVector = getWorkoutIcon(workout.type),
+                    contentDescription = workout.type,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(48.dp)
+                )
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                Text(
+                    text = workout.categoryName.ifEmpty { workout.type },
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center
+                )
+                
+                Text(
+                    text = "${workout.duration} minutes",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                
+                workout.targetCalories?.let { calories ->
+                    Text(
+                        text = "$calories calories target",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                
+                Spacer(modifier = Modifier.height(24.dp))
+                
+                // Timer Display
+                if (timerState != TimerState.Idle) {
+                    Card(
+                        modifier = Modifier.size(120.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = when (timerState) {
+                                TimerState.Running -> MaterialTheme.colorScheme.primaryContainer
+                                TimerState.Paused -> MaterialTheme.colorScheme.tertiaryContainer
+                                TimerState.TimeUp -> MaterialTheme.colorScheme.errorContainer
+                                else -> MaterialTheme.colorScheme.surfaceVariant
+                            }
+                        )
+                    ) {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = if (timerState == TimerState.TimeUp) {
+                                    "TIME UP!"
+                                } else {
+                                    formatTime(remainingTime)
+                                },
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                textAlign = TextAlign.Center,
+                                color = when (timerState) {
+                                    TimerState.TimeUp -> MaterialTheme.colorScheme.error
+                                    else -> MaterialTheme.colorScheme.onSurface
+                                }
+                            )
+                        }
+                    }
+                    
+                    Spacer(modifier = Modifier.height(24.dp))
+                }
+                
+                // Action Buttons
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    // Start/Pause/Resume Button
+                    Button(
+                        onClick = {
+                            when (timerState) {
+                                TimerState.Idle -> {
+                                    timerState = TimerState.Running
+                                }
+                                TimerState.Running -> {
+                                    timerState = TimerState.Paused
+                                }
+                                TimerState.Paused -> {
+                                    timerState = TimerState.Running
+                                }
+                                TimerState.TimeUp -> {
+                                    // Reset timer
+                                    remainingTime = workout.duration * 60
+                                    timerState = TimerState.Running
+                                }
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary
+                        )
+                    ) {
+                        Icon(
+                            imageVector = when (timerState) {
+                                TimerState.Idle -> Icons.Default.PlayArrow
+                                TimerState.Running -> Icons.Default.Pause
+                                TimerState.Paused -> Icons.Default.PlayArrow
+                                TimerState.TimeUp -> Icons.Default.Refresh
+                            },
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            when (timerState) {
+                                TimerState.Idle -> "Start Workout"
+                                TimerState.Running -> "Pause"
+                                TimerState.Paused -> "Resume"
+                                TimerState.TimeUp -> "Start Again"
+                            }
+                        )
+                    }
+                    
+                    // Completed Button
+                    Button(
+                        onClick = {
+                            scope.launch(Dispatchers.IO) {
+                                try {
+                                    // Save to completed workouts
+                                    val completedWorkout = com.example.fitpro.data.CompletedWorkout(
+                                        userEmail = userEmail,
+                                        workoutType = workout.type,
+                                        categoryName = workout.categoryName.ifEmpty { workout.type },
+                                        duration = workout.duration,
+                                        targetCalories = workout.targetCalories,
+                                        actualDuration = when (timerState) {
+                                            TimerState.TimeUp -> workout.duration
+                                            else -> workout.duration - (remainingTime / 60)
+                                        }
+                                    )
+                                    completedWorkoutDao.insertCompletedWorkout(completedWorkout)
+                                    
+                                    // Remove from workout plans
+                                    workoutPlanDao.deleteWorkoutPlan(workout)
+                                    
+                                    withContext(Dispatchers.Main) {
+                                        onDismiss()
+                                    }
+                                } catch (e: Exception) {
+                                    e.printStackTrace()
+                                }
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.secondary
+                        )
+                    ) {
+                        Icon(
+                            Icons.Default.CheckCircle,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Mark as Completed")
+                    }
+                    
+                    // Cancel Button
+                    OutlinedButton(
+                        onClick = {
+                            scope.launch(Dispatchers.IO) {
+                                try {
+                                    // Just remove without saving
+                                    workoutPlanDao.deleteWorkoutPlan(workout)
+                                    
+                                    withContext(Dispatchers.Main) {
+                                        onDismiss()
+                                    }
+                                } catch (e: Exception) {
+                                    e.printStackTrace()
+                                }
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error)
+                    ) {
+                        Icon(
+                            Icons.Default.Cancel,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp),
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            "Cancel Workout",
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                    
+                    Spacer(modifier = Modifier.height(8.dp))
+                    
+                    // Close Button
+                    TextButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Close")
+                    }
+                }
+            }
+        }
+    }
+}
+
+// Timer state enum
+private enum class TimerState {
+    Idle, Running, Paused, TimeUp
+}
+
+// Helper function to format time
+private fun formatTime(seconds: Int): String {
+    val minutes = seconds / 60
+    val remainingSeconds = seconds % 60
+    return String.format("%02d:%02d", minutes, remainingSeconds)
 }
 
 private fun getWorkoutIcon(workoutType: String): ImageVector {
