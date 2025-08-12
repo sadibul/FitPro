@@ -25,6 +25,12 @@ interface UserDao {
 
     @Query("UPDATE user_profile SET caloriesBurned = :calories WHERE email = :email")
     suspend fun updateCalories(email: String, calories: Int)
+    
+    @Query("UPDATE user_profile SET caloriesBurned = caloriesBurned + :additionalCalories WHERE email = :email")
+    suspend fun addCaloriesBurned(email: String, additionalCalories: Int)
+    
+    @Query("UPDATE user_profile SET caloriesBurned = 0 WHERE email = :email")
+    suspend fun resetCaloriesBurned(email: String)
 
     @Query("UPDATE user_profile SET heartRate = :rate WHERE email = :email")
     suspend fun updateHeartRate(email: String, rate: Int)

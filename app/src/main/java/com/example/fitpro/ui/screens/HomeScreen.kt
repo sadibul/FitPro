@@ -32,6 +32,7 @@ import androidx.core.content.ContextCompat
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -140,6 +141,7 @@ fun HomeScreen(
             userEmail = currentUserEmail,
             workoutPlanDao = workoutPlanDao,
             completedWorkoutDao = completedWorkoutDao,
+            userDao = userDao,
             onNavigateToPlan = { navController.navigate(Screen.Plan.route) }
         )
 
@@ -261,6 +263,7 @@ private fun CurrentPlanSection(
     userEmail: String?,
     workoutPlanDao: WorkoutPlanDao,
     completedWorkoutDao: CompletedWorkoutDao,
+    userDao: UserDao,
     onNavigateToPlan: () -> Unit
 ) {
     val scope = rememberCoroutineScope()
@@ -299,6 +302,7 @@ private fun CurrentPlanSection(
                         workout = workout,
                         workoutPlanDao = workoutPlanDao,
                         completedWorkoutDao = completedWorkoutDao,
+                        userDao = userDao,
                         userEmail = userEmail ?: "",
                         onDelete = {
                             scope.launch(Dispatchers.IO) {
@@ -360,6 +364,7 @@ private fun WorkoutCard(
     workout: WorkoutPlan,
     workoutPlanDao: WorkoutPlanDao,
     completedWorkoutDao: CompletedWorkoutDao,
+    userDao: UserDao,
     userEmail: String,
     onDelete: () -> Unit
 ) {
@@ -385,6 +390,7 @@ private fun WorkoutCard(
     Card(
         modifier = Modifier
             .width(160.dp)
+            .height(140.dp) // Fixed height for consistency
             .shadow(4.dp, RoundedCornerShape(12.dp))
             .clickable { showModal = true }, // Make card clickable to open modal
         shape = RoundedCornerShape(12.dp),
@@ -397,8 +403,12 @@ private fun WorkoutCard(
         )
     ) {
         Column(
-            modifier = Modifier.padding(12.dp)
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(12.dp),
+            verticalArrangement = Arrangement.SpaceBetween
         ) {
+            // Top section with icon and close button
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -410,7 +420,8 @@ private fun WorkoutCard(
                     Icon(
                         imageVector = getWorkoutIcon(workout.type),
                         contentDescription = workout.type,
-                        tint = MaterialTheme.colorScheme.primary
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(24.dp) // Consistent icon size
                     )
                     
                     // Timer indicator
@@ -438,43 +449,51 @@ private fun WorkoutCard(
                 }
             }
             
-            Spacer(modifier = Modifier.height(8.dp))
-            
-            Text(
-                text = workout.categoryName.ifEmpty { workout.type },
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold
-            )
-            
-            // Show timer or duration
-            if (isTimerActive && currentRemainingTime > 0) {
+            // Content section with consistent spacing
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.Center
+            ) {
                 Text(
-                    text = formatTime(currentRemainingTime),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = if (isTimerRunning) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontWeight = FontWeight.Medium
+                    text = workout.categoryName.ifEmpty { workout.type },
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
                 )
-            } else if (isTimerActive && currentRemainingTime <= 0) {
+                
+                Spacer(modifier = Modifier.height(4.dp))
+                
+                // Show timer or duration
+                if (isTimerActive && currentRemainingTime > 0) {
+                    Text(
+                        text = formatTime(currentRemainingTime),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (isTimerRunning) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontWeight = FontWeight.Medium
+                    )
+                } else if (isTimerActive && currentRemainingTime <= 0) {
+                    Text(
+                        text = "TIME UP!",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                        fontWeight = FontWeight.Bold
+                    )
+                } else {
+                    Text(
+                        text = "${workout.duration} min",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                
+                Spacer(modifier = Modifier.height(2.dp))
+                
+                // Always show calories section for consistency
                 Text(
-                    text = "TIME UP!",
+                    text = workout.targetCalories?.let { "$it cal" } ?: "No calories",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error,
-                    fontWeight = FontWeight.Bold
-                )
-            } else {
-                Text(
-                    text = "${workout.duration} min",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            
-            // Only show calories if they exist
-            workout.targetCalories?.let { calories ->
-                Text(
-                    text = "$calories cal",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
                 )
             }
         }
@@ -486,6 +505,7 @@ private fun WorkoutCard(
             workout = workout,
             workoutPlanDao = workoutPlanDao,
             completedWorkoutDao = completedWorkoutDao,
+            userDao = userDao,
             userEmail = userEmail,
             onDismiss = { showModal = false }
         )
@@ -497,6 +517,7 @@ private fun WorkoutActionModal(
     workout: WorkoutPlan,
     workoutPlanDao: WorkoutPlanDao,
     completedWorkoutDao: CompletedWorkoutDao,
+    userDao: UserDao,
     userEmail: String,
     onDismiss: () -> Unit
 ) {
@@ -750,6 +771,11 @@ private fun WorkoutActionModal(
                                 )
                                 completedWorkoutDao.insertCompletedWorkout(completedWorkout)
                                 
+                                // Add calories to user's burned total if workout has calories
+                                workout.targetCalories?.let { calories ->
+                                    userDao.addCaloriesBurned(userEmail, calories)
+                                }
+                                
                                 // Remove timer and workout plan
                                 WorkoutTimerManager.removeTimer(workout.id)
                                 workoutPlanDao.deleteWorkoutPlan(workout)
@@ -873,6 +899,7 @@ private fun ActivityStatsSection(
     mealPlanDao: MealPlanDao
 ) {
     var showStepTargetDialog by remember { mutableStateOf(false) }
+    var showCaloriesResetDialog by remember { mutableStateOf(false) }
     var showMealPlanCompletionDialog by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     
@@ -895,7 +922,7 @@ private fun ActivityStatsSection(
             value = "$calories",
             label = "Calories Burn",
             modifier = Modifier.weight(1f),
-            onClick = { /* Could add functionality later */ }
+            onClick = { showCaloriesResetDialog = true }
         )
         
         Spacer(modifier = Modifier.width(8.dp))
@@ -938,6 +965,53 @@ private fun ActivityStatsSection(
                     }
                 }
                 showStepTargetDialog = false
+            }
+        )
+    }
+    
+    // Calories Reset Dialog
+    if (showCaloriesResetDialog) {
+        AlertDialog(
+            onDismissRequest = { showCaloriesResetDialog = false },
+            icon = {
+                Icon(
+                    Icons.Default.LocalFireDepartment,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(24.dp)
+                )
+            },
+            title = {
+                Text("Reset Calories Burned?")
+            },
+            text = {
+                Text("Are you sure you want to reset your calories burned counter to 0? This action cannot be undone.")
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        currentUserEmail?.let { email ->
+                            scope.launch(Dispatchers.IO) {
+                                try {
+                                    userDao.resetCaloriesBurned(email)
+                                } catch (e: Exception) {
+                                    e.printStackTrace()
+                                }
+                            }
+                        }
+                        showCaloriesResetDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Text("Reset")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCaloriesResetDialog = false }) {
+                    Text("Cancel")
+                }
             }
         )
     }
