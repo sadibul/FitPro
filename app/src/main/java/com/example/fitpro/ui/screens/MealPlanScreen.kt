@@ -34,13 +34,18 @@ fun MealPlanScreen(
     val userProfile by userProfileFlow.collectAsState(initial = null)
     val currentUser = userProfile ?: return
     
-    var targetCalories by remember { mutableStateOf("1500") }
+    var breakfastCalories by remember { mutableStateOf(400f) }
+    var lunchCalories by remember { mutableStateOf(600f) }
+    var dinnerCalories by remember { mutableStateOf(500f) }
     var showCompletionDialog by remember { mutableStateOf(false) }
     var createdMealPlan by remember { mutableStateOf<MealPlan?>(null) }
     val coroutineScope = rememberCoroutineScope()
     
     // Get current meal plan status
     val currentMealPlan by mealPlanDao.getCurrentMealPlan(currentUser.email).collectAsState(initial = null)
+    
+    // Calculate total calories
+    val totalCalories = (breakfastCalories + lunchCalories + dinnerCalories).toInt()
 
     Scaffold(
         topBar = {
@@ -70,87 +75,104 @@ fun MealPlanScreen(
             }
 
             item {
-                // Target Calories Input Card
+                // Breakfast Card
+                MealSliderCard(
+                    mealType = "Breakfast",
+                    calories = breakfastCalories,
+                    icon = Icons.Default.WbSunny,
+                    onCaloriesChange = { breakfastCalories = it }
+                )
+            }
+
+            item {
+                // Lunch Card
+                MealSliderCard(
+                    mealType = "Lunch",
+                    calories = lunchCalories,
+                    icon = Icons.Default.Restaurant,
+                    onCaloriesChange = { lunchCalories = it }
+                )
+            }
+
+            item {
+                // Dinner Card
+                MealSliderCard(
+                    mealType = "Dinner",
+                    calories = dinnerCalories,
+                    icon = Icons.Default.Restaurant,
+                    onCaloriesChange = { dinnerCalories = it }
+                )
+            }
+
+            item {
+                // Total Daily Calories Card
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .shadow(4.dp, RoundedCornerShape(12.dp)),
-                    shape = RoundedCornerShape(12.dp)
+                        .shadow(8.dp, RoundedCornerShape(16.dp)),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer
+                    )
                 ) {
                     Column(
-                        modifier = Modifier.padding(16.dp)
+                        modifier = Modifier.padding(20.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            text = "Target Daily Calories",
+                            text = "Total Daily Calories",
                             style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Medium
                         )
-                        
-                        Spacer(modifier = Modifier.height(16.dp))
-                        
-                        OutlinedTextField(
-                            value = targetCalories,
-                            onValueChange = { 
-                                if (it.all { char -> char.isDigit() } && it.length <= 4) {
-                                    targetCalories = it
-                                }
-                            },
-                            label = { Text("Calories") },
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = true
-                        )
-                        
                         Spacer(modifier = Modifier.height(8.dp))
-                        
                         Text(
-                            text = "Set your target calories for the day",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            text = totalCalories.toString(),
+                            style = MaterialTheme.typography.headlineLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
                         )
                     }
                 }
             }
 
             item {
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
                 // Create Meal Plan Button
                 Button(
                     onClick = {
-                        if (targetCalories.isNotBlank() && targetCalories.toIntOrNull() != null) {
-                            coroutineScope.launch {
-                                withContext(Dispatchers.IO) {
-                                    val calories = targetCalories.toInt()
-                                    val mealPlan = MealPlan(
-                                        userEmail = currentUser.email,
-                                        name = "Daily Meal Plan",
-                                        breakfast = """{"calories": ${calories * 0.25}}""",
-                                        lunch = """{"calories": ${calories * 0.4}}""",
-                                        dinner = """{"calories": ${calories * 0.35}}""",
-                                        totalCalories = calories,
-                                        isCompleted = false
-                                    )
-                                    mealPlanDao.insertMealPlan(mealPlan)
-                                    
-                                    // Update user's calorie target
-                                    userDao.updateCalorieTarget(currentUser.email, calories)
-                                    
-                                    // Get the created meal plan
-                                    val newMealPlan = mealPlanDao.getCurrentMealPlan(currentUser.email)
-                                    createdMealPlan = mealPlan
-                                }
-                                showCompletionDialog = true
+                        coroutineScope.launch {
+                            withContext(Dispatchers.IO) {
+                                val mealPlan = MealPlan(
+                                    userEmail = currentUser.email,
+                                    name = "Daily Meal Plan",
+                                    breakfast = """{"calories": ${breakfastCalories.toInt()}}""",
+                                    lunch = """{"calories": ${lunchCalories.toInt()}}""",
+                                    dinner = """{"calories": ${dinnerCalories.toInt()}}""",
+                                    totalCalories = totalCalories,
+                                    isCompleted = false
+                                )
+                                mealPlanDao.insertMealPlan(mealPlan)
+                                
+                                // Update user's calorie target
+                                userDao.updateCalorieTarget(currentUser.email, totalCalories)
+                                
+                                createdMealPlan = mealPlan
                             }
+                            showCompletionDialog = true
                         }
                     },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp)
                         .shadow(8.dp, RoundedCornerShape(28.dp)),
-                    shape = RoundedCornerShape(28.dp),
-                    enabled = targetCalories.isNotBlank() && targetCalories.toIntOrNull() != null
+                    shape = RoundedCornerShape(28.dp)
                 ) {
-                    Text("Create Meal Plan")
+                    Text(
+                        text = "Create Meal Plan",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Medium
+                    )
                 }
             }
 
@@ -288,6 +310,80 @@ fun MealPlanScreen(
                     }
                 }
             }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun MealSliderCard(
+    mealType: String,
+    calories: Float,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    onCaloriesChange: (Float) -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(4.dp, RoundedCornerShape(12.dp)),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        icon, 
+                        contentDescription = mealType,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        text = mealType,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+                Text(
+                    text = "${calories.toInt()} cal",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Text(
+                text = "Target Calories",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            Slider(
+                value = calories,
+                onValueChange = onCaloriesChange,
+                valueRange = 100f..1000f,
+                steps = 18,
+                modifier = Modifier.fillMaxWidth(),
+                colors = SliderDefaults.colors(
+                    thumbColor = MaterialTheme.colorScheme.primary,
+                    activeTrackColor = MaterialTheme.colorScheme.primary,
+                    inactiveTrackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                )
+            )
         }
     }
 }
