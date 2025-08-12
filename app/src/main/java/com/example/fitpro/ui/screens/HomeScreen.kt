@@ -42,6 +42,8 @@ import com.example.fitpro.data.UserProfile
 import com.example.fitpro.data.UserDao
 import com.example.fitpro.data.WorkoutPlan
 import com.example.fitpro.data.WorkoutPlanDao
+import com.example.fitpro.data.MealPlan
+import com.example.fitpro.data.MealPlanDao
 import com.example.fitpro.utils.StepCounterManager
 import com.example.fitpro.utils.UserSession
 import kotlinx.coroutines.Dispatchers
@@ -57,6 +59,7 @@ fun HomeScreen(
     userProfileFlow: Flow<UserProfile?>,
     userDao: UserDao,
     workoutPlanDao: WorkoutPlanDao,
+    mealPlanDao: MealPlanDao,
     stepCounterManager: StepCounterManager,
     onBMICardClick: () -> Unit
 ) {
@@ -67,6 +70,11 @@ fun HomeScreen(
     val scope = rememberCoroutineScope()
     val userSession = remember { UserSession(context) }
     val currentUserEmail = userSession.getCurrentUserEmail()
+    
+    // Get current meal plan for the user
+    val currentMealPlan by (currentUserEmail?.let { email ->
+        mealPlanDao.getCurrentMealPlan(email)
+    } ?: flowOf(null)).collectAsStateWithLifecycle(initialValue = null)
 
     // Permission request launcher
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -138,7 +146,9 @@ fun HomeScreen(
             heartRate = userProfile?.heartRate ?: 0,
             userDao = userDao,
             currentUserEmail = currentUserEmail,
-            calorieTarget = userProfile?.calorieTarget ?: 0
+            calorieTarget = userProfile?.calorieTarget ?: 0,
+            currentMealPlan = currentMealPlan,
+            navController = navController
         )
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -427,7 +437,9 @@ private fun ActivityStatsSection(
     heartRate: Int,
     userDao: UserDao,
     currentUserEmail: String?,
-    calorieTarget: Int = 0
+    calorieTarget: Int = 0,
+    currentMealPlan: MealPlan? = null,
+    navController: NavController
 ) {
     var showStepTargetDialog by remember { mutableStateOf(false) }
     var showCalorieTargetDialog by remember { mutableStateOf(false) }
@@ -457,13 +469,17 @@ private fun ActivityStatsSection(
         
         Spacer(modifier = Modifier.width(8.dp))
         
-        // Enhanced Calories Plan Card (shows target)
+        // Enhanced Calories Plan Card (shows status or target)
         ActivityStatCardEnhanced(
             icon = Icons.Default.Restaurant,
-            value = "$calorieTarget",
+            value = if (currentMealPlan != null) {
+                if (currentMealPlan.isCompleted) "Completed" else "${currentMealPlan.totalCalories}"
+            } else {
+                if (calorieTarget > 0) "$calorieTarget" else "0"
+            },
             label = "Calories Plan",
             modifier = Modifier.weight(1f),
-            onClick = { showCalorieTargetDialog = true }
+            onClick = { navController.navigate(Screen.MealPlan.route) }
         )
     }
     

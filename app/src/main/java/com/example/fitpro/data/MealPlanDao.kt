@@ -18,26 +18,32 @@ interface MealPlanDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertMealPlan(plan: MealPlan)
 
-    @Query("SELECT * FROM meal_plans WHERE userId = :userId ORDER BY id DESC LIMIT 1")
-    fun getCurrentMealPlan(userId: Int): Flow<MealPlan?>
+    @Query("SELECT * FROM meal_plans WHERE userEmail = :userEmail ORDER BY id DESC LIMIT 1")
+    fun getCurrentMealPlan(userEmail: String): Flow<MealPlan?>
 
-    @Query("SELECT * FROM meal_plans WHERE userId = :userId")
-    fun getAllMealPlans(userId: Int): Flow<List<MealPlan>>
+    @Query("SELECT * FROM meal_plans WHERE userEmail = :userEmail")
+    fun getAllMealPlans(userEmail: String): Flow<List<MealPlan>>
 
-    @Query("SELECT COALESCE(SUM(totalCalories), 0) FROM meal_plans WHERE userId = :userId AND createdAt >= date('now', '-7 days')")
-    fun getWeeklyCalories(userId: Int): Flow<Int>
+    @Query("SELECT COALESCE(SUM(totalCalories), 0) FROM meal_plans WHERE userEmail = :userEmail AND createdAt >= date('now', '-7 days')")
+    fun getWeeklyCalories(userEmail: String): Flow<Int>
 
-    @Query("SELECT COALESCE(AVG(totalCalories), 0.0) FROM meal_plans WHERE userId = :userId AND createdAt >= date('now', '-7 days')")
-    fun getAverageDailyCalories(userId: Int): Flow<Float>
+    @Query("SELECT COALESCE(AVG(totalCalories), 0.0) FROM meal_plans WHERE userEmail = :userEmail AND createdAt >= date('now', '-7 days')")
+    fun getAverageDailyCalories(userEmail: String): Flow<Float>
 
-    @Query("SELECT date(createdAt) as date, SUM(totalCalories) as calories FROM meal_plans WHERE userId = :userId AND date(createdAt) >= date('now', '-7 days') GROUP BY date(createdAt)")
-    fun getDailyCaloriesForWeek(userId: Int): Flow<List<DailyCalories>>
+    @Query("SELECT date(createdAt) as date, SUM(totalCalories) as calories FROM meal_plans WHERE userEmail = :userEmail AND date(createdAt) >= date('now', '-7 days') GROUP BY date(createdAt)")
+    fun getDailyCaloriesForWeek(userEmail: String): Flow<List<DailyCalories>>
 
-    @Query("SELECT MAX(totalCalories) FROM meal_plans WHERE userId = :userId AND date(createdAt) >= date('now', '-7 days')")
-    fun getMaxDailyCalories(userId: Int): Flow<Int?>
+    @Query("SELECT MAX(totalCalories) FROM meal_plans WHERE userEmail = :userEmail AND date(createdAt) >= date('now', '-7 days')")
+    fun getMaxDailyCalories(userEmail: String): Flow<Int?>
 
-    @Query("SELECT * FROM meal_plans WHERE userId = :userId")
-    fun getMealPlansForUser(userId: Int): Flow<List<MealPlan>>
+    @Query("SELECT * FROM meal_plans WHERE userEmail = :userEmail")
+    fun getMealPlansForUser(userEmail: String): Flow<List<MealPlan>>
+
+    @Query("UPDATE meal_plans SET isCompleted = :isCompleted WHERE id = :mealPlanId")
+    suspend fun updateMealPlanCompletion(mealPlanId: Int, isCompleted: Boolean)
+
+    @Query("SELECT * FROM meal_plans WHERE userEmail = :userEmail AND isCompleted = 1 ORDER BY id DESC LIMIT 1")
+    fun getLastCompletedMealPlan(userEmail: String): Flow<MealPlan?>
 
     @Query("""
         SELECT 
@@ -52,10 +58,10 @@ interface MealPlanDao {
             END as day,
             COALESCE(SUM(totalCalories), 0) as calories
         FROM meal_plans 
-        WHERE userId = :userId AND createdAt >= date('now', '-7 days')
+        WHERE userEmail = :userEmail AND createdAt >= date('now', '-7 days')
         GROUP BY strftime('%w', createdAt)
     """)
-    fun getWeeklyCaloriesByDay(userId: Int): Flow<List<WeeklyCalories>>
+    fun getWeeklyCaloriesByDay(userEmail: String): Flow<List<WeeklyCalories>>
 
     @Update
     suspend fun updateMealPlan(mealPlan: MealPlan)

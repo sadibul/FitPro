@@ -18,11 +18,12 @@ data class WorkoutPlan(
 @Entity(tableName = "meal_plans")
 data class MealPlan(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
-    val userId: Int,
+    val userEmail: String, // Changed to userEmail for consistency
     val name: String,
     val breakfast: String, // JSON string of meal details
     val lunch: String,
     val dinner: String,
     val totalCalories: Int,
+    val isCompleted: Boolean = false, // Track completion status
     val createdAt: String = java.time.LocalDateTime.now().toString()
 )

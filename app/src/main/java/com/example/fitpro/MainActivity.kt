@@ -413,6 +413,7 @@ fun MainAppWithBottomNav(
                     userProfileFlow = userProfileFlow,
                     userDao = userDao,
                     workoutPlanDao = workoutPlanDao,
+                    mealPlanDao = mealPlanDao,
                     stepCounterManager = stepCounterManager,
                     onBMICardClick = { navController.navigate(Screen.BMIDetails.route) }
                 )
@@ -466,7 +467,8 @@ fun MainAppWithBottomNav(
                 MealPlanScreen(
                     navController = navController,
                     userProfileFlow = userProfileFlow,
-                    mealPlanDao = mealPlanDao
+                    mealPlanDao = mealPlanDao,
+                    userDao = userDao
                 )
             }
         }

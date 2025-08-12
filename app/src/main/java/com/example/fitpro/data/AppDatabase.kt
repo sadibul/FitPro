@@ -10,7 +10,7 @@ import java.util.concurrent.Executors
 
 @Database(
     entities = [UserProfile::class, WorkoutPlan::class, MealPlan::class],
-    version = 14, // Incremented version for calorie target
+    version = 15, // Incremented version for meal plan updates
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -67,6 +67,37 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        // Migration from version 14 to 15
+        private val MIGRATION_14_15 = object : Migration(14, 15) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                // Update meal_plans table: change userId to userEmail and add isCompleted
+                database.execSQL("""
+                    CREATE TABLE meal_plans_new (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        userEmail TEXT NOT NULL,
+                        name TEXT NOT NULL,
+                        breakfast TEXT NOT NULL,
+                        lunch TEXT NOT NULL,
+                        dinner TEXT NOT NULL,
+                        totalCalories INTEGER NOT NULL,
+                        isCompleted INTEGER NOT NULL DEFAULT 0,
+                        createdAt TEXT NOT NULL
+                    )
+                """)
+                
+                // Copy existing data (assuming userId 1 maps to default email)
+                database.execSQL("""
+                    INSERT INTO meal_plans_new (id, userEmail, name, breakfast, lunch, dinner, totalCalories, isCompleted, createdAt)
+                    SELECT id, 'user@example.com', name, breakfast, lunch, dinner, totalCalories, 0, createdAt
+                    FROM meal_plans
+                """)
+                
+                // Drop old table and rename new table
+                database.execSQL("DROP TABLE meal_plans")
+                database.execSQL("ALTER TABLE meal_plans_new RENAME TO meal_plans")
+            }
+        }
+
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -74,7 +105,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "fitpro_database"
                 )
-                    .addMigrations(MIGRATION_12_13, MIGRATION_13_14) // Add both migrations
+                    .addMigrations(MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15) // Add new migration
                     .fallbackToDestructiveMigration() // Fallback for other migrations
                     .fallbackToDestructiveMigrationOnDowngrade()
                     .setQueryExecutor(databaseExecutor) // Use dedicated executor
