@@ -49,6 +49,7 @@ import com.example.fitpro.data.CompletedWorkoutDao
 import com.example.fitpro.data.CompletedWorkout
 import com.example.fitpro.utils.StepCounterManager
 import com.example.fitpro.utils.UserSession
+import com.example.fitpro.utils.WorkoutTimerManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.delay
@@ -364,12 +365,36 @@ private fun WorkoutCard(
 ) {
     var showModal by remember { mutableStateOf(false) }
     
+    // Get timer status
+    val activeTimers by WorkoutTimerManager.activeTimers.collectAsStateWithLifecycle()
+    val isTimerActive = WorkoutTimerManager.isTimerActive(workout.id)
+    val isTimerRunning = WorkoutTimerManager.isTimerRunning(workout.id)
+    
+    // Real-time timer updates for card display
+    var currentRemainingTime by remember { mutableStateOf(0) }
+    
+    LaunchedEffect(isTimerActive) {
+        if (isTimerActive) {
+            while (WorkoutTimerManager.isTimerActive(workout.id)) {
+                currentRemainingTime = WorkoutTimerManager.getCurrentRemainingTime(workout.id)
+                delay(1000)
+            }
+        }
+    }
+    
     Card(
         modifier = Modifier
             .width(160.dp)
             .shadow(4.dp, RoundedCornerShape(12.dp))
             .clickable { showModal = true }, // Make card clickable to open modal
-        shape = RoundedCornerShape(12.dp)
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = when {
+                isTimerRunning -> MaterialTheme.colorScheme.primaryContainer
+                isTimerActive -> MaterialTheme.colorScheme.tertiaryContainer
+                else -> MaterialTheme.colorScheme.surface
+            }
+        )
     ) {
         Column(
             modifier = Modifier.padding(12.dp)
@@ -379,11 +404,27 @@ private fun WorkoutCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.Top
             ) {
-                Icon(
-                    imageVector = getWorkoutIcon(workout.type),
-                    contentDescription = workout.type,
-                    tint = MaterialTheme.colorScheme.primary
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = getWorkoutIcon(workout.type),
+                        contentDescription = workout.type,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    
+                    // Timer indicator
+                    if (isTimerActive) {
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Icon(
+                            imageVector = if (isTimerRunning) Icons.Default.PlayArrow else Icons.Default.Pause,
+                            contentDescription = "Timer status",
+                            modifier = Modifier.size(12.dp),
+                            tint = if (isTimerRunning) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+                
                 IconButton(
                     onClick = onDelete,
                     modifier = Modifier.size(20.dp)
@@ -405,11 +446,28 @@ private fun WorkoutCard(
                 fontWeight = FontWeight.Bold
             )
             
-            Text(
-                text = "${workout.duration} min",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            // Show timer or duration
+            if (isTimerActive && currentRemainingTime > 0) {
+                Text(
+                    text = formatTime(currentRemainingTime),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (isTimerRunning) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontWeight = FontWeight.Medium
+                )
+            } else if (isTimerActive && currentRemainingTime <= 0) {
+                Text(
+                    text = "TIME UP!",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                    fontWeight = FontWeight.Bold
+                )
+            } else {
+                Text(
+                    text = "${workout.duration} min",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
             
             // Only show calories if they exist
             workout.targetCalories?.let { calories ->
@@ -443,21 +501,30 @@ private fun WorkoutActionModal(
     onDismiss: () -> Unit
 ) {
     val scope = rememberCoroutineScope()
-    var timerState by remember { mutableStateOf<TimerState>(TimerState.Idle) }
-    var remainingTime by remember { mutableStateOf(workout.duration * 60) } // Convert minutes to seconds
     
-    // Timer logic
-    LaunchedEffect(timerState) {
-        if (timerState == TimerState.Running) {
-            while (remainingTime > 0 && timerState == TimerState.Running) {
+    // Get timer state from persistent manager
+    val activeTimers by WorkoutTimerManager.activeTimers.collectAsStateWithLifecycle()
+    val timerState = activeTimers[workout.id]
+    val isTimerActive = WorkoutTimerManager.isTimerActive(workout.id)
+    
+    // Real-time timer updates
+    var currentRemainingTime by remember { mutableStateOf(0) }
+    
+    // Update remaining time every second
+    LaunchedEffect(isTimerActive) {
+        if (isTimerActive) {
+            while (WorkoutTimerManager.isTimerActive(workout.id)) {
+                currentRemainingTime = WorkoutTimerManager.getCurrentRemainingTime(workout.id)
                 delay(1000)
-                remainingTime--
             }
-            if (remainingTime <= 0) {
-                timerState = TimerState.TimeUp
-            }
+        } else {
+            currentRemainingTime = workout.duration * 60
         }
     }
+    
+    // Confirmation dialog states
+    var showCompleteConfirmation by remember { mutableStateOf(false) }
+    var showCancelConfirmation by remember { mutableStateOf(false) }
     
     Dialog(onDismissRequest = onDismiss) {
         Card(
@@ -504,15 +571,15 @@ private fun WorkoutActionModal(
                 Spacer(modifier = Modifier.height(24.dp))
                 
                 // Timer Display
-                if (timerState != TimerState.Idle) {
+                if (isTimerActive) {
                     Card(
                         modifier = Modifier.size(120.dp),
                         shape = RoundedCornerShape(12.dp),
                         colors = CardDefaults.cardColors(
-                            containerColor = when (timerState) {
-                                TimerState.Running -> MaterialTheme.colorScheme.primaryContainer
-                                TimerState.Paused -> MaterialTheme.colorScheme.tertiaryContainer
-                                TimerState.TimeUp -> MaterialTheme.colorScheme.errorContainer
+                            containerColor = when {
+                                currentRemainingTime <= 0 -> MaterialTheme.colorScheme.errorContainer
+                                WorkoutTimerManager.isTimerRunning(workout.id) -> MaterialTheme.colorScheme.primaryContainer
+                                WorkoutTimerManager.isTimerPaused(workout.id) -> MaterialTheme.colorScheme.tertiaryContainer
                                 else -> MaterialTheme.colorScheme.surfaceVariant
                             }
                         )
@@ -522,16 +589,16 @@ private fun WorkoutActionModal(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = if (timerState == TimerState.TimeUp) {
+                                text = if (currentRemainingTime <= 0) {
                                     "TIME UP!"
                                 } else {
-                                    formatTime(remainingTime)
+                                    formatTime(currentRemainingTime)
                                 },
                                 style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold,
                                 textAlign = TextAlign.Center,
-                                color = when (timerState) {
-                                    TimerState.TimeUp -> MaterialTheme.colorScheme.error
+                                color = when {
+                                    currentRemainingTime <= 0 -> MaterialTheme.colorScheme.error
                                     else -> MaterialTheme.colorScheme.onSurface
                                 }
                             )
@@ -549,20 +616,19 @@ private fun WorkoutActionModal(
                     // Start/Pause/Resume Button
                     Button(
                         onClick = {
-                            when (timerState) {
-                                TimerState.Idle -> {
-                                    timerState = TimerState.Running
+                            when {
+                                !isTimerActive -> {
+                                    WorkoutTimerManager.startTimer(workout.id, workout.duration)
                                 }
-                                TimerState.Running -> {
-                                    timerState = TimerState.Paused
+                                WorkoutTimerManager.isTimerRunning(workout.id) -> {
+                                    WorkoutTimerManager.pauseTimer(workout.id)
                                 }
-                                TimerState.Paused -> {
-                                    timerState = TimerState.Running
+                                WorkoutTimerManager.isTimerPaused(workout.id) -> {
+                                    WorkoutTimerManager.resumeTimer(workout.id)
                                 }
-                                TimerState.TimeUp -> {
-                                    // Reset timer
-                                    remainingTime = workout.duration * 60
-                                    timerState = TimerState.Running
+                                currentRemainingTime <= 0 -> {
+                                    WorkoutTimerManager.removeTimer(workout.id)
+                                    WorkoutTimerManager.startTimer(workout.id, workout.duration)
                                 }
                             }
                         },
@@ -572,56 +638,31 @@ private fun WorkoutActionModal(
                         )
                     ) {
                         Icon(
-                            imageVector = when (timerState) {
-                                TimerState.Idle -> Icons.Default.PlayArrow
-                                TimerState.Running -> Icons.Default.Pause
-                                TimerState.Paused -> Icons.Default.PlayArrow
-                                TimerState.TimeUp -> Icons.Default.Refresh
+                            imageVector = when {
+                                !isTimerActive -> Icons.Default.PlayArrow
+                                WorkoutTimerManager.isTimerRunning(workout.id) -> Icons.Default.Pause
+                                WorkoutTimerManager.isTimerPaused(workout.id) -> Icons.Default.PlayArrow
+                                currentRemainingTime <= 0 -> Icons.Default.Refresh
+                                else -> Icons.Default.PlayArrow
                             },
                             contentDescription = null,
                             modifier = Modifier.size(20.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            when (timerState) {
-                                TimerState.Idle -> "Start Workout"
-                                TimerState.Running -> "Pause"
-                                TimerState.Paused -> "Resume"
-                                TimerState.TimeUp -> "Start Again"
+                            when {
+                                !isTimerActive -> "Start Workout"
+                                WorkoutTimerManager.isTimerRunning(workout.id) -> "Pause"
+                                WorkoutTimerManager.isTimerPaused(workout.id) -> "Resume"
+                                currentRemainingTime <= 0 -> "Start Again"
+                                else -> "Start Workout"
                             }
                         )
                     }
                     
                     // Completed Button
                     Button(
-                        onClick = {
-                            scope.launch(Dispatchers.IO) {
-                                try {
-                                    // Save to completed workouts
-                                    val completedWorkout = com.example.fitpro.data.CompletedWorkout(
-                                        userEmail = userEmail,
-                                        workoutType = workout.type,
-                                        categoryName = workout.categoryName.ifEmpty { workout.type },
-                                        duration = workout.duration,
-                                        targetCalories = workout.targetCalories,
-                                        actualDuration = when (timerState) {
-                                            TimerState.TimeUp -> workout.duration
-                                            else -> workout.duration - (remainingTime / 60)
-                                        }
-                                    )
-                                    completedWorkoutDao.insertCompletedWorkout(completedWorkout)
-                                    
-                                    // Remove from workout plans
-                                    workoutPlanDao.deleteWorkoutPlan(workout)
-                                    
-                                    withContext(Dispatchers.Main) {
-                                        onDismiss()
-                                    }
-                                } catch (e: Exception) {
-                                    e.printStackTrace()
-                                }
-                            }
-                        },
+                        onClick = { showCompleteConfirmation = true },
                         modifier = Modifier.fillMaxWidth(),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.secondary
@@ -638,20 +679,7 @@ private fun WorkoutActionModal(
                     
                     // Cancel Button
                     OutlinedButton(
-                        onClick = {
-                            scope.launch(Dispatchers.IO) {
-                                try {
-                                    // Just remove without saving
-                                    workoutPlanDao.deleteWorkoutPlan(workout)
-                                    
-                                    withContext(Dispatchers.Main) {
-                                        onDismiss()
-                                    }
-                                } catch (e: Exception) {
-                                    e.printStackTrace()
-                                }
-                            }
-                        },
+                        onClick = { showCancelConfirmation = true },
                         modifier = Modifier.fillMaxWidth(),
                         border = BorderStroke(1.dp, MaterialTheme.colorScheme.error)
                     ) {
@@ -681,13 +709,126 @@ private fun WorkoutActionModal(
             }
         }
     }
+    
+    // Completion Confirmation Dialog
+    if (showCompleteConfirmation) {
+        AlertDialog(
+            onDismissRequest = { showCompleteConfirmation = false },
+            icon = {
+                Icon(
+                    Icons.Default.CheckCircle,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.secondary,
+                    modifier = Modifier.size(24.dp)
+                )
+            },
+            title = {
+                Text("Complete Workout?")
+            },
+            text = {
+                Text("Are you sure you want to mark this workout as completed? This will save your progress and remove the workout from your current plan.")
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        scope.launch(Dispatchers.IO) {
+                            try {
+                                // Save to completed workouts
+                                val actualDuration = if (isTimerActive) {
+                                    WorkoutTimerManager.getActualDurationMinutes(workout.id)
+                                } else {
+                                    workout.duration
+                                }
+                                
+                                val completedWorkout = CompletedWorkout(
+                                    userEmail = userEmail,
+                                    workoutType = workout.type,
+                                    categoryName = workout.categoryName.ifEmpty { workout.type },
+                                    duration = workout.duration,
+                                    targetCalories = workout.targetCalories,
+                                    actualDuration = actualDuration
+                                )
+                                completedWorkoutDao.insertCompletedWorkout(completedWorkout)
+                                
+                                // Remove timer and workout plan
+                                WorkoutTimerManager.removeTimer(workout.id)
+                                workoutPlanDao.deleteWorkoutPlan(workout)
+                                
+                                withContext(Dispatchers.Main) {
+                                    showCompleteConfirmation = false
+                                    onDismiss()
+                                }
+                            } catch (e: Exception) {
+                                e.printStackTrace()
+                            }
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.secondary
+                    )
+                ) {
+                    Text("Complete")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCompleteConfirmation = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+    
+    // Cancel Confirmation Dialog
+    if (showCancelConfirmation) {
+        AlertDialog(
+            onDismissRequest = { showCancelConfirmation = false },
+            icon = {
+                Icon(
+                    Icons.Default.Warning,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(24.dp)
+                )
+            },
+            title = {
+                Text("Cancel Workout?")
+            },
+            text = {
+                Text("Are you sure you want to cancel this workout? This will remove it from your plan without saving any progress.")
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        scope.launch(Dispatchers.IO) {
+                            try {
+                                // Remove timer and workout plan without saving
+                                WorkoutTimerManager.removeTimer(workout.id)
+                                workoutPlanDao.deleteWorkoutPlan(workout)
+                                
+                                withContext(Dispatchers.Main) {
+                                    showCancelConfirmation = false
+                                    onDismiss()
+                                }
+                            } catch (e: Exception) {
+                                e.printStackTrace()
+                            }
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Text("Cancel Workout")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCancelConfirmation = false }) {
+                    Text("Keep Workout")
+                }
+            }
+        )
+    }
 }
-
-// Timer state enum
-private enum class TimerState {
-    Idle, Running, Paused, TimeUp
-}
-
 // Helper function to format time
 private fun formatTime(seconds: Int): String {
     val minutes = seconds / 60
