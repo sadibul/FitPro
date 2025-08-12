@@ -11,6 +11,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
@@ -37,6 +38,7 @@ fun MealPlanScreen(
     var breakfastCalories by remember { mutableStateOf(400f) }
     var lunchCalories by remember { mutableStateOf(600f) }
     var dinnerCalories by remember { mutableStateOf(500f) }
+    var showOverwriteDialog by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
     
     // Get current meal plan status
@@ -139,24 +141,32 @@ fun MealPlanScreen(
                 // Create Meal Plan Button
                 Button(
                     onClick = {
-                        coroutineScope.launch {
-                            withContext(Dispatchers.IO) {
-                                val mealPlan = MealPlan(
-                                    userEmail = currentUser.email,
-                                    name = "Daily Meal Plan",
-                                    breakfast = """{"calories": ${breakfastCalories.toInt()}}""",
-                                    lunch = """{"calories": ${lunchCalories.toInt()}}""",
-                                    dinner = """{"calories": ${dinnerCalories.toInt()}}""",
-                                    totalCalories = totalCalories,
-                                    isCompleted = false
-                                )
-                                mealPlanDao.insertMealPlan(mealPlan)
-                                
-                                // Update user's calorie target
-                                userDao.updateCalorieTarget(currentUser.email, totalCalories)
+                        // Check if user has an incomplete meal plan
+                        val mealPlan = currentMealPlan
+                        if (mealPlan != null && !mealPlan.isCompleted) {
+                            // Show confirmation dialog for overwriting incomplete plan
+                            showOverwriteDialog = true
+                        } else {
+                            // No meal plan or completed meal plan - create directly
+                            coroutineScope.launch {
+                                withContext(Dispatchers.IO) {
+                                    val mealPlan = MealPlan(
+                                        userEmail = currentUser.email,
+                                        name = "Daily Meal Plan",
+                                        breakfast = """{"calories": ${breakfastCalories.toInt()}}""",
+                                        lunch = """{"calories": ${lunchCalories.toInt()}}""",
+                                        dinner = """{"calories": ${dinnerCalories.toInt()}}""",
+                                        totalCalories = totalCalories,
+                                        isCompleted = false
+                                    )
+                                    mealPlanDao.insertMealPlan(mealPlan)
+                                    
+                                    // Update user's calorie target
+                                    userDao.updateCalorieTarget(currentUser.email, totalCalories)
+                                }
+                                // Navigate back to home after creating meal plan
+                                navController.navigateUp()
                             }
-                            // Navigate back to home after creating meal plan
-                            navController.navigateUp()
                         }
                     },
                     modifier = Modifier
@@ -170,6 +180,95 @@ fun MealPlanScreen(
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Medium
                     )
+                }
+            }
+        }
+    }
+
+    // Overwrite Confirmation Dialog
+    if (showOverwriteDialog) {
+        Dialog(onDismissRequest = { showOverwriteDialog = false }) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Icon(
+                        Icons.Default.Warning,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(48.dp)
+                    )
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    Text(
+                        text = "Replace Meal Plan?",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                    
+                    Spacer(modifier = Modifier.height(8.dp))
+                    
+                    Text(
+                        text = "Are you sure you want to create this meal plan? If you do this, your previous meal plan data will be lost!",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center
+                    )
+                    
+                    Spacer(modifier = Modifier.height(24.dp))
+                    
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = {
+                                showOverwriteDialog = false
+                            },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("Cancel")
+                        }
+                        
+                        Button(
+                            onClick = {
+                                // User confirmed - create the new meal plan
+                                coroutineScope.launch {
+                                    withContext(Dispatchers.IO) {
+                                        val mealPlan = MealPlan(
+                                            userEmail = currentUser.email,
+                                            name = "Daily Meal Plan",
+                                            breakfast = """{"calories": ${breakfastCalories.toInt()}}""",
+                                            lunch = """{"calories": ${lunchCalories.toInt()}}""",
+                                            dinner = """{"calories": ${dinnerCalories.toInt()}}""",
+                                            totalCalories = totalCalories,
+                                            isCompleted = false
+                                        )
+                                        mealPlanDao.insertMealPlan(mealPlan)
+                                        
+                                        // Update user's calorie target
+                                        userDao.updateCalorieTarget(currentUser.email, totalCalories)
+                                    }
+                                    showOverwriteDialog = false
+                                    // Navigate back to home after creating meal plan
+                                    navController.navigateUp()
+                                }
+                            },
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.error
+                            )
+                        ) {
+                            Text("Replace")
+                        }
+                    }
                 }
             }
         }
