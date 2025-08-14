@@ -81,7 +81,7 @@ class StepCounterManager(private val context: Context) : SensorEventListener {
     }
     
     private fun getTodayString(): String {
-        return SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+        return TimeUtils.getBangladeshDateString()
     }
     
     private fun getTodaysSteps(): Int {

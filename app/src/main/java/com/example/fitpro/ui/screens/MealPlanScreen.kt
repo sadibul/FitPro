@@ -19,6 +19,7 @@ import com.example.fitpro.data.MealPlan
 import com.example.fitpro.data.MealPlanDao
 import com.example.fitpro.data.UserProfile
 import com.example.fitpro.data.UserDao
+import com.example.fitpro.utils.TimeUtils
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
@@ -52,7 +53,12 @@ fun MealPlanScreen(
             TopAppBar(
                 title = { Text("Meal Plan") },
                 navigationIcon = {
-                    IconButton(onClick = { navController.navigateUp() }) {
+                    IconButton(onClick = { 
+                        navController.navigate("home") {
+                            popUpTo("home") { inclusive = false }
+                            launchSingleTop = true
+                        }
+                    }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                     }
                 }
@@ -157,7 +163,8 @@ fun MealPlanScreen(
                                         lunch = """{"calories": ${lunchCalories.toInt()}}""",
                                         dinner = """{"calories": ${dinnerCalories.toInt()}}""",
                                         totalCalories = totalCalories,
-                                        isCompleted = false
+                                        isCompleted = false,
+                                        createdAt = TimeUtils.getBangladeshDateString()
                                     )
                                     mealPlanDao.insertMealPlan(mealPlan)
                                     
@@ -165,7 +172,10 @@ fun MealPlanScreen(
                                     userDao.updateCalorieTarget(currentUser.email, totalCalories)
                                 }
                                 // Navigate back to home after creating meal plan
-                                navController.navigateUp()
+                                navController.navigate("home") {
+                                    popUpTo("home") { inclusive = false }
+                                    launchSingleTop = true
+                                }
                             }
                         }
                     },
@@ -249,7 +259,8 @@ fun MealPlanScreen(
                                             lunch = """{"calories": ${lunchCalories.toInt()}}""",
                                             dinner = """{"calories": ${dinnerCalories.toInt()}}""",
                                             totalCalories = totalCalories,
-                                            isCompleted = false
+                                            isCompleted = false,
+                                            createdAt = TimeUtils.getBangladeshDateString()
                                         )
                                         mealPlanDao.insertMealPlan(mealPlan)
                                         
@@ -258,7 +269,10 @@ fun MealPlanScreen(
                                     }
                                     showOverwriteDialog = false
                                     // Navigate back to home after creating meal plan
-                                    navController.navigateUp()
+                                    navController.navigate("home") {
+                                        popUpTo("home") { inclusive = false }
+                                        launchSingleTop = true
+                                    }
                                 }
                             },
                             modifier = Modifier.weight(1f),

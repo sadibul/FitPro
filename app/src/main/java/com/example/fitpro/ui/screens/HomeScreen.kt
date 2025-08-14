@@ -51,6 +51,7 @@ import com.example.fitpro.data.CompletedWorkout
 import com.example.fitpro.utils.StepCounterManager
 import com.example.fitpro.utils.UserSession
 import com.example.fitpro.utils.WorkoutTimerManager
+import com.example.fitpro.utils.TimeUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.delay
@@ -767,7 +768,8 @@ private fun WorkoutActionModal(
                                     categoryName = workout.categoryName.ifEmpty { workout.type },
                                     duration = workout.duration,
                                     targetCalories = workout.targetCalories,
-                                    actualDuration = actualDuration
+                                    actualDuration = actualDuration,
+                                    completedAt = TimeUtils.getBangladeshTimeMillis()
                                 )
                                 completedWorkoutDao.insertCompletedWorkout(completedWorkout)
                                 

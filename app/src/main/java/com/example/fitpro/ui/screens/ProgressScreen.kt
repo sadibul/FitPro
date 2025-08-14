@@ -27,10 +27,11 @@ import androidx.navigation.NavController
 import com.example.fitpro.data.*
 import com.example.fitpro.ui.theme.ChartBlue
 import com.example.fitpro.utils.UserSession
+import com.example.fitpro.utils.TimeUtils
 import kotlinx.coroutines.flow.Flow
 import java.text.SimpleDateFormat
 import java.util.Locale
-import java.util.TimeZone
+import java.util.Date
 import kotlinx.coroutines.flow.flowOf
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -891,83 +892,89 @@ private fun generateWeeklyData(
     allMealPlans: List<MealPlan>,
     userProfile: UserProfile?
 ): List<DayData> {
-    val calendar = java.util.Calendar.getInstance()
+    val bangladeshCalendar = java.util.Calendar.getInstance(TimeUtils.getBangladeshTimeZone())
     
-    // Set timezone to Bangladesh (UTC+6)
-    calendar.timeZone = TimeZone.getTimeZone("Asia/Dhaka")
+    // Get current date in Bangladesh timezone
+    val currentDate = bangladeshCalendar.time
+    val currentDayOfWeek = bangladeshCalendar.get(java.util.Calendar.DAY_OF_WEEK) // 1=Sun, 2=Mon, ..., 7=Sat
     
-    // Get start of current week (Sunday)
-    calendar.firstDayOfWeek = java.util.Calendar.SUNDAY
-    calendar.set(java.util.Calendar.DAY_OF_WEEK, java.util.Calendar.SUNDAY)
-    calendar.set(java.util.Calendar.HOUR_OF_DAY, 0)
-    calendar.set(java.util.Calendar.MINUTE, 0)
-    calendar.set(java.util.Calendar.SECOND, 0)
-    calendar.set(java.util.Calendar.MILLISECOND, 0)
+    // Calculate start of current week (Sunday)
+    val daysFromSunday = when (currentDayOfWeek) {
+        java.util.Calendar.SUNDAY -> 0
+        java.util.Calendar.MONDAY -> 1
+        java.util.Calendar.TUESDAY -> 2
+        java.util.Calendar.WEDNESDAY -> 3
+        java.util.Calendar.THURSDAY -> 4
+        java.util.Calendar.FRIDAY -> 5
+        java.util.Calendar.SATURDAY -> 6
+        else -> 0
+    }
     
-    // Get current day of week in Bangladesh timezone
-    val currentCalendar = java.util.Calendar.getInstance(TimeZone.getTimeZone("Asia/Dhaka"))
-    val currentDayOfWeek = currentCalendar.get(java.util.Calendar.DAY_OF_WEEK)
+    // Set to start of current week (Sunday)
+    val weekStartCalendar = java.util.Calendar.getInstance(TimeUtils.getBangladeshTimeZone())
+    weekStartCalendar.add(java.util.Calendar.DAY_OF_YEAR, -daysFromSunday)
+    weekStartCalendar.set(java.util.Calendar.HOUR_OF_DAY, 0)
+    weekStartCalendar.set(java.util.Calendar.MINUTE, 0)
+    weekStartCalendar.set(java.util.Calendar.SECOND, 0)
+    weekStartCalendar.set(java.util.Calendar.MILLISECOND, 0)
+    
+    // Generate the 7 days of current week
+    val weekDates = mutableListOf<String>()
+    val dayLabels = listOf("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")
+    
+    val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+    dateFormat.timeZone = TimeUtils.getBangladeshTimeZone()
+    
+    for (dayIndex in 0..6) {
+        val dayDate = dateFormat.format(Date(weekStartCalendar.timeInMillis))
+        weekDates.add(dayDate)
+        weekStartCalendar.add(java.util.Calendar.DAY_OF_YEAR, 1)
+    }
+    
+    // Group workouts by Bangladesh date
+    val workoutsByDate = completedWorkouts.groupBy { workout ->
+        TimeUtils.convertToBangladeshDay(workout.completedAt)
+    }
+    
+    // Group meal plans by Bangladesh date (only completed ones)
+    val mealPlansByDate = allMealPlans
+        .filter { it.isCompleted }
+        .groupBy { it.createdAt } // createdAt is already in Bangladesh date format
     
     val weeklyData = mutableListOf<DayData>()
     
     // Generate data for each day of the week
     for (dayIndex in 0..6) {
-        val dayStartTime = calendar.timeInMillis
-        calendar.add(java.util.Calendar.DAY_OF_YEAR, 1)
-        val dayEndTime = calendar.timeInMillis
+        val dayDate = weekDates[dayIndex]
         
         // Count workouts for this day
-        val dayWorkouts = completedWorkouts.count { workout ->
-            workout.completedAt >= dayStartTime && workout.completedAt < dayEndTime
-        }
+        val dayWorkouts = workoutsByDate[dayDate]?.size ?: 0
         
         // Calculate calories burned from workouts for this day
-        val dayCaloriesBurned = completedWorkouts
-            .filter { workout ->
-                workout.completedAt >= dayStartTime && workout.completedAt < dayEndTime
-            }
-            .sumOf { (it.targetCalories ?: 0).toLong() }
+        val dayCaloriesBurned = workoutsByDate[dayDate]
+            ?.sumOf { (it.targetCalories ?: 0).toLong() } ?: 0L
         
-        // For meal plans, calculate calories consumed for this day
-        val dayCaloriesConsumed = allMealPlans
-            .filter { mealPlan ->
-                // Check if meal plan was completed on this day
-                mealPlan.isCompleted && try {
-                    val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-                    dateFormat.timeZone = TimeZone.getTimeZone("Asia/Dhaka")
-                    val mealPlanDate = dateFormat.parse(mealPlan.createdAt)?.time ?: 0L
-                    mealPlanDate >= dayStartTime && mealPlanDate < dayEndTime
-                } catch (e: Exception) {
-                    false
-                }
-            }
-            .sumOf { it.totalCalories }
+        // Calculate calories consumed from meal plans for this day
+        val dayCaloriesConsumed = mealPlansByDate[dayDate]
+            ?.sumOf { it.totalCalories } ?: 0
         
         // Calculate actual steps for this day
         // For current day, use the dailySteps from userProfile
         // For other days, we don't have historical data yet, so show 0
-        val actualSteps = if (dayIndex == (currentDayOfWeek - 1)) { // Convert Sunday=1 to Sunday=0 indexing
+        val actualSteps = if (dayIndex == (currentDayOfWeek - 1)) { // currentDayOfWeek is 1-based, dayIndex is 0-based
             (userProfile?.dailySteps ?: 0).toFloat()
         } else {
             0f // No historical step data available for other days
         }
         
-        val actualCaloriesBurned = dayCaloriesBurned.toFloat()
-        val actualCaloriesConsumed = dayCaloriesConsumed.toFloat()
-        val actualWorkouts = dayWorkouts
-        
         weeklyData.add(
             DayData(
                 steps = actualSteps,
-                caloriesBurned = actualCaloriesBurned,
-                caloriesConsumed = actualCaloriesConsumed,
-                workouts = actualWorkouts
+                caloriesBurned = dayCaloriesBurned.toFloat(),
+                caloriesConsumed = dayCaloriesConsumed.toFloat(),
+                workouts = dayWorkouts
             )
         )
-        
-        // Reset calendar for next iteration
-        calendar.add(java.util.Calendar.DAY_OF_YEAR, -1)
-        calendar.add(java.util.Calendar.DAY_OF_YEAR, 1)
     }
     
     return weeklyData

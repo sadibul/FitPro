@@ -55,7 +55,12 @@ fun WorkoutPlanScreen(
             TopAppBar(
                 title = { Text("Workout Plan") },
                 navigationIcon = {
-                    IconButton(onClick = { navController.navigateUp() }) {
+                    IconButton(onClick = { 
+                        navController.navigate("home") {
+                            popUpTo("home") { inclusive = false }
+                            launchSingleTop = true
+                        }
+                    }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                     }
                 }
@@ -118,7 +123,10 @@ fun WorkoutPlanScreen(
                         selectedCategory = null
                         
                         // Navigate back to home to see the added workout
-                        navController.navigateUp()
+                        navController.navigate("home") {
+                            popUpTo("home") { inclusive = false }
+                            launchSingleTop = true
+                        }
                     } catch (e: Exception) {
                         e.printStackTrace()
                     }
