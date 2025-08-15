@@ -1,5 +1,8 @@
 package com.example.fitpro.ui.screens
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -18,7 +21,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -32,6 +34,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
+import coil.compose.AsyncImage
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -49,38 +52,55 @@ fun AccountScreen(
     val coroutineScope = rememberCoroutineScope()
     
     var showEditProfileDialog by remember { mutableStateOf(false) }
-    var showUpdateStatsDialog by remember { mutableStateOf(false) }
     
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Profile Header
-        ProfileHeaderCard(
-            userProfile = userProfile,
-            onEditClick = { showEditProfileDialog = true }
+        // Top Navigation Bar
+        TopNavigationBar(
+            onBackClick = { navController.popBackStack() },
+            onSettingsClick = { /* Handle settings */ }
         )
         
-        // Stats Update Card
-        StatsUpdateCard(
-            userProfile = userProfile,
-            onUpdateClick = { showUpdateStatsDialog = true }
-        )
-        
-        // Settings Options
-        SettingsOptionsCard(
-            onLogoutClick = {
-                userSession.logout()
-                onLogout() // Use the callback instead of navController
-            }
-        )
-        
-        // App Info
-        AppInfoCard()
+        Column(
+            modifier = Modifier
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(24.dp)
+        ) {
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            // Profile Section
+            ProfileSection(
+                userProfile = userProfile,
+                userDao = userDao,
+                onEditClick = { showEditProfileDialog = true }
+            )
+            
+            // Stats Cards Row
+            StatsCardsRow(userProfile = userProfile)
+            
+            // Premium Section
+            PremiumSection()
+            
+            // Menu Items
+            MenuItemsSection(
+                onEditProfileClick = { showEditProfileDialog = true },
+                onNotificationsClick = { /* Handle notifications */ },
+                onSettingsClick = { /* Handle settings */ }
+            )
+            
+            // Logout Button
+            LogoutButton(
+                onLogoutClick = {
+                    userSession.logout()
+                    onLogout()
+                }
+            )
+        }
     }
     
     // Edit Profile Dialog
@@ -105,361 +125,405 @@ fun AccountScreen(
             }
         )
     }
-    
-    // Update Stats Dialog  
-    if (showUpdateStatsDialog) {
-        UpdateStatsDialog(
-            userProfile = userProfile,
-            onDismiss = { showUpdateStatsDialog = false },
-            onSave = { weight, height, age ->
-                userProfile?.let { profile ->
-                    coroutineScope.launch(Dispatchers.IO) {
-                        try {
-                            val updatedProfile = profile.copy(
-                                weight = weight,
-                                height = height,
-                                age = age
-                            )
-                            userDao.updateUser(updatedProfile)
-                            withContext(Dispatchers.Main) {
-                                showUpdateStatsDialog = false
-                            }
-                        } catch (e: Exception) {
-                            e.printStackTrace()
-                            withContext(Dispatchers.Main) {
-                                showUpdateStatsDialog = false
-                            }
-                        }
-                    }
-                }
-            }
-        )
-    }
 }
 
 @Composable
-private fun ProfileHeaderCard(
-    userProfile: UserProfile?,
-    onEditClick: () -> Unit
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .shadow(4.dp, RoundedCornerShape(16.dp)),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-    ) {
-        Column(
-            modifier = Modifier.padding(20.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            // Profile Picture Placeholder
-            Box(
-                modifier = Modifier
-                    .size(100.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f))
-                    .clickable { /* Handle profile picture change */ },
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Person,
-                    contentDescription = "Profile Picture",
-                    modifier = Modifier.size(50.dp),
-                    tint = MaterialTheme.colorScheme.primary
-                )
-            }
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            Text(
-                text = userProfile?.name ?: "User Name",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold
-            )
-            
-            Text(
-                text = userProfile?.email ?: "user@email.com",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-            )
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            // BMI Display
-            userProfile?.let { profile ->
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
-                    )
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(
-                            text = "BMI: ${String.format("%.1f", profile.calculateBMI())}",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        Text(
-                            text = profile.getBMICategory(),
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                    }
-                }
-            }
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            Button(
-                onClick = onEditClick,
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(25.dp)
-            ) {
-                Icon(Icons.Default.Edit, contentDescription = null)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Edit Profile")
-            }
-        }
-    }
-}
-
-@Composable
-private fun StatsUpdateCard(
-    userProfile: UserProfile?,
-    onUpdateClick: () -> Unit
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .shadow(4.dp, RoundedCornerShape(16.dp)),
-        shape = RoundedCornerShape(16.dp)
-    ) {
-        Column(modifier = Modifier.padding(20.dp)) {
-            Text(
-                text = "Physical Stats",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
-            )
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            userProfile?.let { profile ->
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceAround
-                ) {
-                    StatItem(
-                        label = "Weight",
-                        value = "${profile.weight} kg",
-                        icon = Icons.Default.MonitorWeight
-                    )
-                    StatItem(
-                        label = "Height", 
-                        value = "${profile.height} cm",
-                        icon = Icons.Default.Height
-                    )
-                    StatItem(
-                        label = "Age",
-                        value = "${profile.age} years",
-                        icon = Icons.Default.Cake
-                    )
-                }
-            }
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            OutlinedButton(
-                onClick = onUpdateClick,
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(25.dp)
-            ) {
-                Icon(Icons.Default.Update, contentDescription = null)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Update Stats")
-            }
-        }
-    }
-}
-
-@Composable
-private fun StatItem(
-    label: String,
-    value: String,
-    icon: ImageVector
-) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(24.dp)
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(
-            text = value,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold
-        )
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-        )
-    }
-}
-
-@Composable
-private fun SettingsOptionsCard(
-    onLogoutClick: () -> Unit
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .shadow(4.dp, RoundedCornerShape(16.dp)),
-        shape = RoundedCornerShape(16.dp)
-    ) {
-        Column(modifier = Modifier.padding(20.dp)) {
-            Text(
-                text = "Settings",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
-            )
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            SettingsItem(
-                icon = Icons.Default.Bedtime,
-                title = "Sleep Schedule",
-                subtitle = "Set your sleep schedule",
-                onClick = { /* Handle sleep schedule */ }
-            )
-            
-            SettingsItem(
-                icon = Icons.Default.Notifications,
-                title = "Notifications",
-                subtitle = "Manage your notifications",
-                onClick = { /* Handle notifications */ }
-            )
-            
-            SettingsItem(
-                icon = Icons.Default.Palette,
-                title = "Theme",
-                subtitle = "Choose your theme",
-                onClick = { /* Handle theme */ }
-            )
-            
-            SettingsItem(
-                icon = Icons.Default.Security,
-                title = "Privacy",
-                subtitle = "Privacy settings",
-                onClick = { /* Handle privacy */ }
-            )
-            
-            SettingsItem(
-                icon = Icons.Default.ExitToApp,
-                title = "Logout",
-                subtitle = "Sign out of your account",
-                onClick = onLogoutClick
-            )
-        }
-    }
-}
-
-@Composable
-private fun SettingsItem(
-    icon: ImageVector,
-    title: String,
-    subtitle: String,
-    onClick: () -> Unit
+private fun TopNavigationBar(
+    onBackClick: () -> Unit,
+    onSettingsClick: () -> Unit
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onClick() }
-            .padding(vertical = 8.dp),
+            .padding(16.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(24.dp)
-        )
-        
-        Spacer(modifier = Modifier.width(16.dp))
-        
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Medium
-            )
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+        IconButton(
+            onClick = onBackClick,
+            modifier = Modifier
+                .size(48.dp)
+                .background(
+                    MaterialTheme.colorScheme.surface,
+                    RoundedCornerShape(12.dp)
+                )
+        ) {
+            Icon(
+                imageVector = Icons.Default.ArrowBack,
+                contentDescription = "Back",
+                tint = MaterialTheme.colorScheme.onSurface
             )
         }
         
-        Icon(
-            imageVector = Icons.Default.KeyboardArrowRight,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+        Text(
+            text = "Account",
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onBackground
+        )
+        
+        IconButton(
+            onClick = onSettingsClick,
+            modifier = Modifier
+                .size(48.dp)
+                .background(
+                    MaterialTheme.colorScheme.surface,
+                    RoundedCornerShape(12.dp)
+                )
+        ) {
+            Icon(
+                imageVector = Icons.Default.Settings,
+                contentDescription = "Settings",
+                tint = MaterialTheme.colorScheme.onSurface
+            )
+        }
+    }
+}
+
+@Composable
+private fun ProfileSection(
+    userProfile: UserProfile?,
+    userDao: UserDao,
+    onEditClick: () -> Unit
+) {
+    var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
+    val coroutineScope = rememberCoroutineScope()
+    
+    // Initialize with current profile image URI
+    LaunchedEffect(userProfile?.profileImageUri) {
+        selectedImageUri = userProfile?.profileImageUri?.let { Uri.parse(it) }
+    }
+    
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let {
+            selectedImageUri = it
+            // Update profile immediately with new image
+            userProfile?.let { profile ->
+                coroutineScope.launch(Dispatchers.IO) {
+                    try {
+                        val updatedProfile = profile.copy(profileImageUri = it.toString())
+                        userDao.updateUser(updatedProfile)
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+            }
+        }
+    }
+    
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        // Profile Picture with Border (similar to green border in image)
+        Box(
+            modifier = Modifier
+                .size(120.dp)
+                .background(
+                    MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
+                    CircleShape
+                )
+                .padding(4.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.surface)
+                .clickable { imagePickerLauncher.launch("image/*") },
+            contentAlignment = Alignment.Center
+        ) {
+            if (selectedImageUri != null) {
+                AsyncImage(
+                    model = selectedImageUri,
+                    contentDescription = "Profile Picture",
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Default.Person,
+                    contentDescription = "Profile Picture",
+                    modifier = Modifier.size(60.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            }
+        }
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        Text(
+            text = userProfile?.name ?: "Mondi Morris",
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onBackground
+        )
+        
+        Spacer(modifier = Modifier.height(4.dp))
+        
+        Text(
+            text = userProfile?.email ?: "mondimorris@gmail.com",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
         )
     }
 }
 
 @Composable
-private fun AppInfoCard() {
+private fun StatsCardsRow(userProfile: UserProfile?) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        StatsCard(
+            modifier = Modifier.weight(1f),
+            icon = Icons.Default.MonitorWeight,
+            title = "Weight",
+            value = "${userProfile?.weight ?: 65.5} kg"
+        )
+        
+        StatsCard(
+            modifier = Modifier.weight(1f),
+            icon = Icons.Default.Height,
+            title = "Height",
+            value = "${(userProfile?.height ?: 170) / 30.48f} Ft".let { 
+                String.format("%.1f Ft", (userProfile?.height ?: 170) / 30.48f)
+            }
+        )
+        
+        StatsCard(
+            modifier = Modifier.weight(1f),
+            icon = Icons.Default.Cake,
+            title = "Age",
+            value = "${userProfile?.age ?: 25} Years"
+        )
+    }
+}
+
+@Composable
+private fun StatsCard(
+    modifier: Modifier = Modifier,
+    icon: ImageVector,
+    title: String,
+    value: String
+) {
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                modifier = Modifier.size(24.dp),
+                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+            )
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            Text(
+                text = value,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+            )
+        }
+    }
+}
+
+@Composable
+private fun PremiumSection() {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.weight(1f)
+            ) {
+                Card(
+                    shape = RoundedCornerShape(8.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.primary
+                    )
+                ) {
+                    Text(
+                        text = "Pro",
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                }
+                
+                Spacer(modifier = Modifier.width(12.dp))
+                
+                Column {
+                    Text(
+                        text = "Go Premium & Unlock More!",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "Upgrade to Premium and enjoy exclusive features.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                    )
+                }
+            }
+            
+            Icon(
+                imageVector = Icons.Default.KeyboardArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+            )
+        }
+    }
+}
+
+@Composable
+private fun MenuItemsSection(
+    onEditProfileClick: () -> Unit,
+    onNotificationsClick: () -> Unit,
+    onSettingsClick: () -> Unit
+) {
+    Column(
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        MenuItem(
+            icon = Icons.Default.Person,
+            title = "Edit Profile",
+            onClick = onEditProfileClick
+        )
+        
+        MenuItem(
+            icon = Icons.Default.Notifications,
+            title = "Notification",
+            onClick = onNotificationsClick,
+            showSwitch = true,
+            switchState = true
+        )
+        
+        MenuItem(
+            icon = Icons.Default.Settings,
+            title = "Setting",
+            onClick = onSettingsClick
+        )
+    }
+}
+
+@Composable
+private fun MenuItem(
+    icon: ImageVector,
+    title: String,
+    onClick: () -> Unit,
+    showSwitch: Boolean = false,
+    switchState: Boolean = false
+) {
+    var switchChecked by remember { mutableStateOf(switchState) }
+    
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(4.dp, RoundedCornerShape(16.dp)),
-        shape = RoundedCornerShape(16.dp)
+            .clickable { if (!showSwitch) onClick() },
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
-        Column(modifier = Modifier.padding(20.dp)) {
-            Text(
-                text = "App Info",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                modifier = Modifier.size(24.dp),
+                tint = MaterialTheme.colorScheme.primary
             )
             
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            SettingsItem(
-                icon = Icons.Default.Info,
-                title = "About",
-                subtitle = "Learn more about FitPro",
-                onClick = { /* Handle about */ }
-            )
-            
-            SettingsItem(
-                icon = Icons.Default.Help,
-                title = "Help & Support",
-                subtitle = "Get help and support",
-                onClick = { /* Handle help */ }
-            )
-            
-            SettingsItem(
-                icon = Icons.Default.Star,
-                title = "Rate App",
-                subtitle = "Rate us on Play Store",
-                onClick = { /* Handle rating */ }
-            )
+            Spacer(modifier = Modifier.width(16.dp))
             
             Text(
-                text = "Version 1.0.0",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                modifier = Modifier.padding(top = 16.dp)
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.weight(1f)
             )
+            
+            if (showSwitch) {
+                Switch(
+                    checked = switchChecked,
+                    onCheckedChange = { 
+                        switchChecked = it
+                        onClick() 
+                    },
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                        checkedTrackColor = MaterialTheme.colorScheme.primary
+                    )
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Default.KeyboardArrowRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                )
+            }
         }
+    }
+}
+
+@Composable
+private fun LogoutButton(onLogoutClick: () -> Unit) {
+    Button(
+        onClick = onLogoutClick,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(56.dp),
+        shape = RoundedCornerShape(16.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = MaterialTheme.colorScheme.primary
+        )
+    ) {
+        Icon(
+            imageVector = Icons.Default.ExitToApp,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onPrimary
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = "Log Out",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onPrimary
+        )
     }
 }
 
@@ -472,7 +536,9 @@ private fun EditProfileDialog(
 ) {
     var name by remember { mutableStateOf(userProfile?.name ?: "") }
     var email by remember { mutableStateOf(userProfile?.email ?: "") }
-    var currentPlan by remember { mutableStateOf(userProfile?.currentPlan ?: "Weight Loss Plan") }
+    var weight by remember { mutableStateOf(userProfile?.weight?.toString() ?: "") }
+    var height by remember { mutableStateOf(userProfile?.height?.toString() ?: "") }
+    var age by remember { mutableStateOf(userProfile?.age?.toString() ?: "") }
     
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -489,57 +555,9 @@ private fun EditProfileDialog(
                     value = email,
                     onValueChange = { email = it },
                     label = { Text("Email") },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = false // Don't allow email changes as it's the primary key
                 )
-                OutlinedTextField(
-                    value = currentPlan,
-                    onValueChange = { currentPlan = it },
-                    label = { Text("Current Plan") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = {
-                    userProfile?.let { profile ->
-                        onSave(
-                            profile.copy(
-                                name = name,
-                                email = email,
-                                currentPlan = currentPlan
-                            )
-                        )
-                    }
-                }
-            ) {
-                Text("Save")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
-            }
-        }
-    )
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun UpdateStatsDialog(
-    userProfile: UserProfile?,
-    onDismiss: () -> Unit,
-    onSave: (Float, Int, Int) -> Unit
-) {
-    var weight by remember { mutableStateOf(userProfile?.weight?.toString() ?: "") }
-    var height by remember { mutableStateOf(userProfile?.height?.toString() ?: "") }
-    var age by remember { mutableStateOf(userProfile?.age?.toString() ?: "") }
-    
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Update Physical Stats") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 OutlinedTextField(
                     value = weight,
                     onValueChange = { weight = it },
@@ -563,13 +581,23 @@ private fun UpdateStatsDialog(
         confirmButton = {
             Button(
                 onClick = {
-                    val weightFloat = weight.toFloatOrNull() ?: return@Button
-                    val heightInt = height.toIntOrNull() ?: return@Button
-                    val ageInt = age.toIntOrNull() ?: return@Button
-                    onSave(weightFloat, heightInt, ageInt)
+                    userProfile?.let { profile ->
+                        val weightFloat = weight.toFloatOrNull() ?: profile.weight
+                        val heightInt = height.toIntOrNull() ?: profile.height
+                        val ageInt = age.toIntOrNull() ?: profile.age
+                        
+                        onSave(
+                            profile.copy(
+                                name = name,
+                                weight = weightFloat,
+                                height = heightInt,
+                                age = ageInt
+                            )
+                        )
+                    }
                 }
             ) {
-                Text("Update")
+                Text("Save")
             }
         },
         dismissButton = {

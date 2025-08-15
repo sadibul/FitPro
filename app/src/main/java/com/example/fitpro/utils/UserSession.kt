@@ -39,7 +39,16 @@ class UserSession(context: Context) {
         prefs.edit().apply {
             remove(KEY_CURRENT_USER_EMAIL)
             putBoolean(KEY_IS_LOGGED_IN, false)
-            putBoolean(KEY_REMEMBER_ME, false)
+            // Only clear remember me if it was explicitly logged out
+            // This ensures proper remember me functionality
+            remove(KEY_REMEMBER_ME)
+            apply()
+        }
+    }
+    
+    fun clearSession() {
+        prefs.edit().apply {
+            clear()
             apply()
         }
     }

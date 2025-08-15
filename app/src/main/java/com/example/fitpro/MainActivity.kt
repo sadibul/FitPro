@@ -229,9 +229,11 @@ fun FitProApp() {
                     delay(300) // Brief delay for UI stability
                     val currentEmail = userSession.getCurrentUserEmail()
                     val shouldRemember = userSession.shouldRememberUser()
+                    val isSessionValid = userSession.isLoggedIn()
                     
                     kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                        isLoggedIn = currentEmail != null && shouldRemember
+                        // User is logged in if they have an active session or if they chose to be remembered
+                        isLoggedIn = (currentEmail != null && isSessionValid) || (currentEmail != null && shouldRemember)
                         sessionChecked = true
                     }
                 }
@@ -257,7 +259,7 @@ fun FitProApp() {
                 }
                 
                 // Show main app if user is logged in or should be remembered
-                if (isLoggedIn || (shouldRememberUser && currentUserEmail != null)) {
+                if (isLoggedIn && currentUserEmail != null) {
                     MainAppWithBottomNav(
                         userDao = userDao!!,
                         workoutPlanDao = workoutPlanDao!!,
@@ -265,9 +267,10 @@ fun FitProApp() {
                         completedWorkoutDao = completedWorkoutDao!!,
                         completedStepTargetDao = completedStepTargetDao!!,
                         stepCounterManager = stepCounterManager!!,
-                        userEmail = currentUserEmail ?: "",
+                        userEmail = currentUserEmail,
                         onLogout = { 
                             // Handle logout by updating the login state
+                            userSession.logout()
                             isLoggedIn = false
                         }
                     )
