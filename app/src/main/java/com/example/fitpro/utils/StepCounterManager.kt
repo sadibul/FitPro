@@ -135,4 +135,15 @@ class StepCounterManager(private val context: Context) : SensorEventListener {
         val currentSteps = getTodaysSteps()
         updateTodaysSteps(currentSteps + steps)
     }
+    
+    // Method to reset steps to 0 (for new targets)
+    fun resetSteps() {
+        val today = getTodayString()
+        preferences.edit()
+            .putInt("steps_$today", 0)
+            .apply()
+        _dailySteps.value = 0
+        hasInitialCount = false
+        initialStepCount = 0
+    }
 }

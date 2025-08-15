@@ -17,6 +17,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.lifecycleScope
@@ -32,6 +33,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.fitpro.data.AppDatabase
 import com.example.fitpro.data.CompletedWorkoutDao
+import com.example.fitpro.data.CompletedStepTargetDao
 import com.example.fitpro.data.MealPlanDao
 import com.example.fitpro.data.UserDao
 import com.example.fitpro.data.WorkoutPlanDao
@@ -98,6 +100,7 @@ fun FitProApp() {
     var workoutPlanDao by remember { mutableStateOf<WorkoutPlanDao?>(null) }
     var mealPlanDao by remember { mutableStateOf<MealPlanDao?>(null) }
     var completedWorkoutDao by remember { mutableStateOf<CompletedWorkoutDao?>(null) }
+    var completedStepTargetDao by remember { mutableStateOf<CompletedStepTargetDao?>(null) }
     var stepCounterManager by remember { mutableStateOf<StepCounterManager?>(null) }
     var isLoggedIn by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(true) }
@@ -117,6 +120,7 @@ fun FitProApp() {
                     workoutPlanDao = database.workoutPlanDao()
                     mealPlanDao = database.mealPlanDao()
                     completedWorkoutDao = database.completedWorkoutDao()
+                    completedStepTargetDao = database.completedStepTargetDao()
                     
                     // Initialize step counter manager
                     stepCounterManager = StepCounterManager(context)
@@ -140,6 +144,7 @@ fun FitProApp() {
                     workoutPlanDao = database.workoutPlanDao()
                     mealPlanDao = database.mealPlanDao()
                     completedWorkoutDao = database.completedWorkoutDao()
+                    completedStepTargetDao = database.completedStepTargetDao()
                     stepCounterManager = StepCounterManager(context)
                     
                     kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
@@ -214,7 +219,7 @@ fun FitProApp() {
             }
         }
         
-        initializationComplete && userDao != null && workoutPlanDao != null && mealPlanDao != null && completedWorkoutDao != null && stepCounterManager != null -> {
+        initializationComplete && userDao != null && workoutPlanDao != null && mealPlanDao != null && completedWorkoutDao != null && completedStepTargetDao != null && stepCounterManager != null -> {
             val userSession = remember { UserSession(context) }
             var sessionChecked by remember { mutableStateOf(false) }
             
@@ -258,9 +263,9 @@ fun FitProApp() {
                         workoutPlanDao = workoutPlanDao!!,
                         mealPlanDao = mealPlanDao!!,
                         completedWorkoutDao = completedWorkoutDao!!,
+                        completedStepTargetDao = completedStepTargetDao!!,
                         stepCounterManager = stepCounterManager!!,
-                        userProfileFlow = userProfileFlow,
-                        userSession = userSession,
+                        userEmail = currentUserEmail ?: "",
                         onLogout = { 
                             // Handle logout by updating the login state
                             isLoggedIn = false
@@ -338,14 +343,26 @@ fun MainAppWithBottomNav(
     workoutPlanDao: WorkoutPlanDao,
     mealPlanDao: MealPlanDao,
     completedWorkoutDao: CompletedWorkoutDao,
+    completedStepTargetDao: CompletedStepTargetDao,
     stepCounterManager: StepCounterManager,
-    userProfileFlow: kotlinx.coroutines.flow.Flow<com.example.fitpro.data.UserProfile?>,
-    userSession: UserSession,
+    userEmail: String,
     onLogout: () -> Unit
 ) {
+    val context = LocalContext.current
+    val userSession = remember { UserSession(context) }
+    val userProfileFlow = remember(userEmail) {
+        userDao.getUserProfile(userEmail)
+    }
+    
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
+    
+    // State to trigger refresh for each screen
+    var homeRefreshKey by remember { mutableStateOf(0) }
+    var planRefreshKey by remember { mutableStateOf(0) }
+    var progressRefreshKey by remember { mutableStateOf(0) }
+    var accountRefreshKey by remember { mutableStateOf(0) }
 
     val bottomNavItems = listOf(
         BottomNavItem(
@@ -387,7 +404,16 @@ fun MainAppWithBottomNav(
                         label = { Text(item.label) },
                         selected = currentDestination?.hierarchy?.any { it.route == item.route } == true,
                         onClick = {
-                            if (currentDestination?.route != item.route) {
+                            if (currentDestination?.route == item.route) {
+                                // Same tab tapped - trigger refresh
+                                when (item.route) {
+                                    Screen.Home.route -> homeRefreshKey++
+                                    Screen.Plan.route -> planRefreshKey++
+                                    Screen.Progress.route -> progressRefreshKey++
+                                    Screen.Account.route -> accountRefreshKey++
+                                }
+                            } else {
+                                // Different tab - navigate normally
                                 navController.navigate(item.route) {
                                     popUpTo(navController.graph.findStartDestination().id) {
                                         saveState = true
@@ -414,48 +440,50 @@ fun MainAppWithBottomNav(
                 modifier = Modifier.padding(paddingValues)
             ) {
             composable(Screen.Home.route) {
-                HomeScreen(
-                    navController = navController,
-                    userProfileFlow = userProfileFlow,
-                    userDao = userDao,
-                    workoutPlanDao = workoutPlanDao,
-                    mealPlanDao = mealPlanDao,
-                    completedWorkoutDao = completedWorkoutDao,
-                    stepCounterManager = stepCounterManager,
-                    onBMICardClick = { navController.navigate(Screen.BMIDetails.route) }
-                )
+                key(homeRefreshKey) { // Add refresh key to force recomposition
+                    HomeScreen(
+                        navController = navController,
+                        userProfileFlow = userProfileFlow,
+                        userDao = userDao,
+                        workoutPlanDao = workoutPlanDao,
+                        mealPlanDao = mealPlanDao,
+                        completedWorkoutDao = completedWorkoutDao,
+                        completedStepTargetDao = completedStepTargetDao,
+                        stepCounterManager = stepCounterManager,
+                        onBMICardClick = { navController.navigate(Screen.BMIDetails.route) }
+                    )
+                }
             }
             composable(Screen.Plan.route) {
-                PlanScreen(
-                    navController = navController,
-                    userProfileFlow = userProfileFlow,
-                    userDao = userDao
-                )
+                key(planRefreshKey) { // Add refresh key to force recomposition
+                    PlanScreen(
+                        navController = navController,
+                        userProfileFlow = userProfileFlow,
+                        userDao = userDao
+                    )
+                }
             }
             composable(Screen.Progress.route) {
-                ProgressScreen(
-                    navController = navController,
-                    userProfileFlow = userProfileFlow,
-                    workoutPlanDao = workoutPlanDao,
-                    mealPlanDao = mealPlanDao,
-                    completedWorkoutDao = completedWorkoutDao
-                )
+                key(progressRefreshKey) { // Add refresh key to force recomposition
+                    ProgressScreen(
+                        navController = navController,
+                        userProfileFlow = userProfileFlow,
+                        workoutPlanDao = workoutPlanDao,
+                        mealPlanDao = mealPlanDao,
+                        completedWorkoutDao = completedWorkoutDao,
+                        completedStepTargetDao = completedStepTargetDao
+                    )
+                }
             }
             composable(Screen.Account.route) {
-                val currentUserEmail = userSession.getCurrentUserEmail()
-                if (currentUserEmail != null) {
+                key(accountRefreshKey) { // Add refresh key to force recomposition
                     AccountScreen(
                         navController = navController,
                         userDao = userDao,
-                        currentUserEmail = currentUserEmail,
+                        currentUserEmail = userEmail,
                         userSession = userSession,
                         onLogout = onLogout
                     )
-                } else {
-                    // If no user logged in, trigger logout
-                    LaunchedEffect(Unit) {
-                        onLogout()
-                    }
                 }
             }
             composable(Screen.BMIDetails.route) {

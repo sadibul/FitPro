@@ -19,9 +19,11 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.example.fitpro.data.*
@@ -41,7 +43,8 @@ fun ProgressScreen(
     userProfileFlow: Flow<UserProfile?>,
     workoutPlanDao: WorkoutPlanDao,
     mealPlanDao: MealPlanDao,
-    completedWorkoutDao: CompletedWorkoutDao
+    completedWorkoutDao: CompletedWorkoutDao,
+    completedStepTargetDao: CompletedStepTargetDao
 ) {
     val context = LocalContext.current
     val userSession = remember { UserSession(context) }
@@ -53,6 +56,11 @@ fun ProgressScreen(
     val completedWorkouts by (currentUserEmail?.let {
         completedWorkoutDao.getCompletedWorkouts(it).collectAsStateWithLifecycle(initialValue = emptyList())
     } ?: flowOf(emptyList<CompletedWorkout>()).collectAsStateWithLifecycle(initialValue = emptyList()))
+    
+    // Get completed step targets for chart data
+    val completedStepTargets by (currentUserEmail?.let {
+        completedStepTargetDao.getCompletedStepTargets(it).collectAsStateWithLifecycle(initialValue = emptyList())
+    } ?: flowOf(emptyList<CompletedStepTarget>()).collectAsStateWithLifecycle(initialValue = emptyList()))
     
     // Get meal plans for calorie consumption data
     val allMealPlans by (currentUserEmail?.let {
@@ -85,16 +93,21 @@ fun ProgressScreen(
 
             // Steps Chart
             item {
-                val weeklyData = remember(completedWorkouts, allMealPlans, userProfile) {
-                    generateWeeklyData(completedWorkouts, allMealPlans, userProfile)
+                val weeklyData = remember(completedStepTargets, allMealPlans, userProfile) {
+                    generateWeeklyStepsData(completedStepTargets, userProfile)
+                }
+                val yearlyData = remember(completedStepTargets, allMealPlans, userProfile) {
+                    generateYearlyStepsData(completedStepTargets, userProfile)
                 }
                 SandowScoreChart(
                     title = "Steps",
-                    data = weeklyData.map { it.steps },
+                    weeklyData = weeklyData,
+                    yearlyData = yearlyData,
                     maxValue = 15000f,
                     yAxisLabels = listOf("0", "5K", "10K", "15K"),
                     color = MaterialTheme.colorScheme.primary,
-                    selectedPeriod = "Weekly"
+                    selectedPeriod = "Weekly",
+                    dataSelector = { it.steps }
                 )
             }
 
@@ -103,13 +116,18 @@ fun ProgressScreen(
                 val weeklyData = remember(completedWorkouts, allMealPlans, userProfile) {
                     generateWeeklyData(completedWorkouts, allMealPlans, userProfile)
                 }
+                val yearlyData = remember(completedWorkouts, allMealPlans, userProfile) {
+                    generateYearlyData(completedWorkouts, allMealPlans, userProfile)
+                }
                 SandowScoreChart(
                     title = "Calories Burn",
-                    data = weeklyData.map { it.caloriesBurned },
+                    weeklyData = weeklyData,
+                    yearlyData = yearlyData,
                     maxValue = 3000f,
                     yAxisLabels = listOf("0", "1K", "2K", "3K"),
                     color = MaterialTheme.colorScheme.error,
-                    selectedPeriod = "Weekly"
+                    selectedPeriod = "Weekly",
+                    dataSelector = { it.caloriesBurned }
                 )
             }
 
@@ -118,13 +136,18 @@ fun ProgressScreen(
                 val weeklyData = remember(completedWorkouts, allMealPlans, userProfile) {
                     generateWeeklyData(completedWorkouts, allMealPlans, userProfile)
                 }
+                val yearlyData = remember(completedWorkouts, allMealPlans, userProfile) {
+                    generateYearlyData(completedWorkouts, allMealPlans, userProfile)
+                }
                 SandowScoreChart(
                     title = "Calories Consume",
-                    data = weeklyData.map { it.caloriesConsumed },
+                    weeklyData = weeklyData,
+                    yearlyData = yearlyData,
                     maxValue = 3000f,
                     yAxisLabels = listOf("0", "1K", "2K", "3K"),
                     color = MaterialTheme.colorScheme.secondary,
-                    selectedPeriod = "Weekly"
+                    selectedPeriod = "Weekly",
+                    dataSelector = { it.caloriesConsumed }
                 )
             }
 
@@ -133,13 +156,18 @@ fun ProgressScreen(
                 val weeklyData = remember(completedWorkouts, allMealPlans, userProfile) {
                     generateWeeklyData(completedWorkouts, allMealPlans, userProfile)
                 }
+                val yearlyData = remember(completedWorkouts, allMealPlans, userProfile) {
+                    generateYearlyData(completedWorkouts, allMealPlans, userProfile)
+                }
                 SandowScoreChart(
                     title = "Workout",
-                    data = weeklyData.map { it.workouts.toFloat() * 30 }, // Convert to minutes (assuming 30 min per workout)
+                    weeklyData = weeklyData,
+                    yearlyData = yearlyData, // No need to multiply, it's already in minutes
                     maxValue = 200f,
                     yAxisLabels = listOf("0", "50", "100", "150", "200"),
                     color = MaterialTheme.colorScheme.tertiary,
-                    selectedPeriod = "Weekly"
+                    selectedPeriod = "Weekly",
+                    dataSelector = { it.workouts.toFloat() }
                 )
             }
         }
@@ -658,15 +686,24 @@ private fun ProgressScreenContent(
 @Composable
 private fun SandowScoreChart(
     title: String,
-    data: List<Float>,
+    weeklyData: List<DayData>,
+    yearlyData: List<DayData>,
     maxValue: Float,
     yAxisLabels: List<String>,
     color: Color,
-    selectedPeriod: String
+    selectedPeriod: String,
+    dataSelector: (DayData) -> Float
 ) {
     var showDropdown by remember { mutableStateOf(false) }
-    val periods = listOf("Daily", "Weekly", "Monthly")
+    val periods = listOf("Weekly", "Yearly")
     var currentPeriod by remember { mutableStateOf(selectedPeriod) }
+    
+    // Choose data based on current period
+    val data = if (currentPeriod == "Weekly") {
+        weeklyData.map(dataSelector)
+    } else {
+        yearlyData.map(dataSelector)
+    }
     
     Card(
         modifier = Modifier
@@ -759,22 +796,27 @@ private fun SandowScoreChart(
             Row(
                 modifier = Modifier.fillMaxWidth()
             ) {
-                // Y-axis labels
-                Column(
-                    modifier = Modifier.width(40.dp),
-                    verticalArrangement = Arrangement.SpaceBetween
-                ) {
-                    yAxisLabels.reversed().forEach { label ->
-                        Text(
-                            text = label,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Color.Gray,
-                            modifier = Modifier.height(20.dp)
-                        )
+                // Y-axis labels (only show for Weekly view)
+                if (currentPeriod == "Weekly") {
+                    Column(
+                        modifier = Modifier
+                            .width(40.dp)
+                            .height(200.dp)
+                            .padding(vertical = 8.dp), // Match chart padding
+                        verticalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        yAxisLabels.reversed().forEach { label ->
+                            Text(
+                                text = label,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color.Gray,
+                                modifier = Modifier.wrapContentHeight()
+                            )
+                        }
                     }
+                    
+                    Spacer(modifier = Modifier.width(16.dp))
                 }
-                
-                Spacer(modifier = Modifier.width(16.dp))
                 
                 // Chart area
                 Column(
@@ -786,21 +828,27 @@ private fun SandowScoreChart(
                             .fillMaxWidth()
                             .height(200.dp)
                     ) {
-                        // Grid lines
-                        Canvas(
-                            modifier = Modifier.fillMaxSize()
-                        ) {
-                            val gridColor = Color.LightGray.copy(alpha = 0.3f)
-                            val gridLines = yAxisLabels.size
-                            
-                            for (i in 0 until gridLines) {
-                                val y = size.height * (i.toFloat() / (gridLines - 1))
-                                drawLine(
-                                    color = gridColor,
-                                    start = Offset(0f, y),
-                                    end = Offset(size.width, y),
-                                    strokeWidth = 1.dp.toPx()
-                                )
+                        // Grid lines (only for Weekly view)
+                        if (currentPeriod == "Weekly") {
+                            Canvas(
+                                modifier = Modifier.fillMaxSize()
+                            ) {
+                                val gridColor = Color.LightGray.copy(alpha = 0.3f)
+                                val gridLines = yAxisLabels.size
+                                val chartHeight = size.height - 16.dp.toPx() // Account for vertical padding
+                                val chartTop = 8.dp.toPx() // Top padding
+                                
+                                // Draw horizontal grid lines aligned with Y-axis labels
+                                for (i in 0 until gridLines) {
+                                    // Calculate Y position from bottom to top
+                                    val y = chartTop + chartHeight - (i.toFloat() / (gridLines - 1) * chartHeight)
+                                    drawLine(
+                                        color = gridColor,
+                                        start = Offset(0f, y),
+                                        end = Offset(size.width, y),
+                                        strokeWidth = 1.dp.toPx()
+                                    )
+                                }
                             }
                         }
                         
@@ -812,18 +860,49 @@ private fun SandowScoreChart(
                             horizontalArrangement = Arrangement.SpaceEvenly,
                             verticalAlignment = Alignment.Bottom
                         ) {
-                            val days = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
-                            val maxDataValue = data.maxOrNull() ?: 1f
-                            val currentMaxValue = maxOf(maxDataValue, maxValue * 0.3f) // Ensure some minimum scale
+                            // Different labels for Weekly vs Yearly
+                            val xAxisLabels = if (currentPeriod == "Weekly") {
+                                listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+                            } else {
+                                listOf("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+                            }
                             
-                            data.forEachIndexed { index, value ->
+                            // Use the maxValue parameter which represents the top Y-axis value for Weekly
+                            // For Yearly, use the max value from data for natural scaling
+                            val chartMaxValue = if (currentPeriod == "Weekly") {
+                                maxValue
+                            } else {
+                                val maxDataValue = data.maxOrNull() ?: 1f
+                                maxOf(maxDataValue, 1f) // Ensure minimum scale
+                            }
+                            val chartHeight = 184f // Available height for bars (200dp - 16dp padding)
+                            
+                            val displayData = if (currentPeriod == "Weekly") {
+                                data.take(7) // Show 7 days for weekly
+                            } else {
+                                // Generate yearly data (12 months) - for now use sample data or extend data
+                                val yearlyData = data.take(12).toMutableList()
+                                while (yearlyData.size < 12) {
+                                    yearlyData.add(0f)
+                                }
+                                yearlyData
+                            }
+                            
+                            displayData.forEachIndexed { index, value ->
                                 Column(
                                     horizontalAlignment = Alignment.CenterHorizontally,
                                     modifier = Modifier.weight(1f)
                                 ) {
-                                    // Highlight bar (Tuesday is highlighted in your image)
-                                    val isHighlighted = index == 1 // Tuesday
-                                    val barHeight = (value / currentMaxValue * 160).dp
+                                    // Highlight bar (Tuesday for Weekly, current month for Yearly)
+                                    val isHighlighted = if (currentPeriod == "Weekly") {
+                                        index == 1 // Tuesday
+                                    } else {
+                                        index == 7 // August (current month)
+                                    }
+                                    
+                                    // Calculate bar height based on ratio to maxValue
+                                    val barHeightRatio = if (chartMaxValue > 0) (value / chartMaxValue) else 0f
+                                    val barHeight = (barHeightRatio * chartHeight).dp
                                     val barColor = if (isHighlighted) Color.Black else Color.LightGray
                                     
                                     // Value label on highlighted bar
@@ -832,13 +911,24 @@ private fun SandowScoreChart(
                                             colors = CardDefaults.cardColors(
                                                 containerColor = Color.Black
                                             ),
-                                            shape = RoundedCornerShape(4.dp)
+                                            shape = RoundedCornerShape(4.dp),
+                                            modifier = Modifier
+                                                .wrapContentWidth()
+                                                .widthIn(min = 32.dp) // Ensure minimum width for larger numbers
                                         ) {
                                             Text(
                                                 text = value.toInt().toString(),
                                                 color = Color.White,
                                                 style = MaterialTheme.typography.bodySmall,
-                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                                fontSize = 12.sp, // Explicit font size
+                                                modifier = Modifier.padding(
+                                                    horizontal = if (currentPeriod == "Weekly") 8.dp else 6.dp,
+                                                    vertical = 4.dp
+                                                ),
+                                                textAlign = TextAlign.Center,
+                                                overflow = TextOverflow.Visible, // Allow text to be fully visible
+                                                softWrap = false, // Keep on single line
+                                                maxLines = 1
                                             )
                                         }
                                         Spacer(modifier = Modifier.height(4.dp))
@@ -847,7 +937,7 @@ private fun SandowScoreChart(
                                     // Bar
                                     Card(
                                         modifier = Modifier
-                                            .width(20.dp)
+                                            .width(if (currentPeriod == "Weekly") 20.dp else 16.dp)
                                             .height(maxOf(barHeight, 8.dp)),
                                         colors = CardDefaults.cardColors(
                                             containerColor = barColor
@@ -862,9 +952,9 @@ private fun SandowScoreChart(
                                     
                                     Spacer(modifier = Modifier.height(8.dp))
                                     
-                                    // Day label
+                                    // X-axis label
                                     Text(
-                                        text = days.getOrNull(index) ?: "",
+                                        text = xAxisLabels.getOrNull(index) ?: "",
                                         style = MaterialTheme.typography.bodySmall,
                                         color = Color.Gray
                                     )
@@ -883,7 +973,7 @@ data class DayData(
     val steps: Float,
     val caloriesBurned: Float,
     val caloriesConsumed: Float,
-    val workouts: Int
+    val workouts: Int // workout duration in minutes
 )
 
 // Function to generate weekly data
@@ -950,6 +1040,10 @@ private fun generateWeeklyData(
         // Count workouts for this day
         val dayWorkouts = workoutsByDate[dayDate]?.size ?: 0
         
+        // Calculate total workout duration for this day (in minutes)
+        val dayWorkoutDuration = workoutsByDate[dayDate]
+            ?.sumOf { it.actualDuration } ?: 0
+        
         // Calculate calories burned from workouts for this day
         val dayCaloriesBurned = workoutsByDate[dayDate]
             ?.sumOf { (it.targetCalories ?: 0).toLong() } ?: 0L
@@ -972,12 +1066,193 @@ private fun generateWeeklyData(
                 steps = actualSteps,
                 caloriesBurned = dayCaloriesBurned.toFloat(),
                 caloriesConsumed = dayCaloriesConsumed.toFloat(),
-                workouts = dayWorkouts
+                workouts = dayWorkoutDuration // Use duration instead of count
             )
         )
     }
     
     return weeklyData
+}
+
+// Function to generate yearly data (12 months)
+private fun generateYearlyData(
+    completedWorkouts: List<CompletedWorkout>,
+    allMealPlans: List<MealPlan>,
+    userProfile: UserProfile?
+): List<DayData> {
+    val bangladeshCalendar = java.util.Calendar.getInstance(TimeUtils.getBangladeshTimeZone())
+    
+    // Get current year
+    val currentYear = bangladeshCalendar.get(java.util.Calendar.YEAR)
+    val currentMonth = bangladeshCalendar.get(java.util.Calendar.MONTH) // 0-based (0 = January)
+    
+    val yearlyData = mutableListOf<DayData>()
+    val dateFormat = SimpleDateFormat("yyyy-MM", Locale.getDefault())
+    dateFormat.timeZone = TimeUtils.getBangladeshTimeZone()
+    
+    // Generate data for each month of the current year
+    for (monthIndex in 0..11) { // 0 = January, 11 = December
+        // Set to first day of this month
+        val monthCalendar = java.util.Calendar.getInstance(TimeUtils.getBangladeshTimeZone())
+        monthCalendar.set(currentYear, monthIndex, 1, 0, 0, 0)
+        monthCalendar.set(java.util.Calendar.MILLISECOND, 0)
+        
+        val monthString = dateFormat.format(monthCalendar.time)
+        
+        // Group workouts by month
+        val monthWorkouts = completedWorkouts.filter { workout ->
+            val workoutDate = TimeUtils.convertToBangladeshDay(workout.completedAt)
+            workoutDate.startsWith(monthString)
+        }
+        
+        // Group meal plans by month
+        val monthMealPlans = allMealPlans.filter { mealPlan ->
+            mealPlan.isCompleted && mealPlan.createdAt.startsWith(monthString)
+        }
+        
+        // Calculate totals for this month
+        val monthWorkoutCount = monthWorkouts.size
+        val monthWorkoutDuration = monthWorkouts.sumOf { it.actualDuration } // Total duration in minutes
+        val monthCaloriesBurned = monthWorkouts.sumOf { (it.targetCalories ?: 0).toLong() }
+        val monthCaloriesConsumed = monthMealPlans.sumOf { it.totalCalories }
+        
+        // For steps, only current month uses actual data, others are 0
+        val monthSteps = if (monthIndex == currentMonth) {
+            (userProfile?.dailySteps ?: 0).toFloat() * bangladeshCalendar.get(java.util.Calendar.DAY_OF_MONTH)
+        } else {
+            0f
+        }
+        
+        yearlyData.add(
+            DayData(
+                steps = monthSteps,
+                caloriesBurned = monthCaloriesBurned.toFloat(),
+                caloriesConsumed = monthCaloriesConsumed.toFloat(),
+                workouts = monthWorkoutDuration // Use duration instead of count
+            )
+        )
+    }
+    
+    return yearlyData
+}
+
+private fun generateWeeklyStepsData(
+    completedStepTargets: List<CompletedStepTarget>,
+    userProfile: UserProfile?
+): List<DayData> {
+    val bangladeshCalendar = java.util.Calendar.getInstance(TimeUtils.getBangladeshTimeZone())
+    
+    // Get current date in Bangladesh timezone
+    val currentDate = bangladeshCalendar.time
+    val currentDayOfWeek = bangladeshCalendar.get(java.util.Calendar.DAY_OF_WEEK) // 1=Sun, 2=Mon, ..., 7=Sat
+    
+    // Calculate start of current week (Sunday)
+    val daysFromSunday = when (currentDayOfWeek) {
+        java.util.Calendar.SUNDAY -> 0
+        java.util.Calendar.MONDAY -> 1
+        java.util.Calendar.TUESDAY -> 2
+        java.util.Calendar.WEDNESDAY -> 3
+        java.util.Calendar.THURSDAY -> 4
+        java.util.Calendar.FRIDAY -> 5
+        java.util.Calendar.SATURDAY -> 6
+        else -> 0
+    }
+    
+    // Set to start of current week (Sunday)
+    val weekStartCalendar = java.util.Calendar.getInstance(TimeUtils.getBangladeshTimeZone())
+    weekStartCalendar.add(java.util.Calendar.DAY_OF_YEAR, -daysFromSunday)
+    weekStartCalendar.set(java.util.Calendar.HOUR_OF_DAY, 0)
+    weekStartCalendar.set(java.util.Calendar.MINUTE, 0)
+    weekStartCalendar.set(java.util.Calendar.SECOND, 0)
+    weekStartCalendar.set(java.util.Calendar.MILLISECOND, 0)
+    
+    // Generate the 7 days of current week
+    val weekDates = mutableListOf<String>()
+    val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+    dateFormat.timeZone = TimeUtils.getBangladeshTimeZone()
+    
+    for (dayIndex in 0..6) {
+        val dayDate = dateFormat.format(Date(weekStartCalendar.timeInMillis))
+        weekDates.add(dayDate)
+        weekStartCalendar.add(java.util.Calendar.DAY_OF_YEAR, 1)
+    }
+    
+    // Group completed step targets by Bangladesh date
+    val stepTargetsByDate = completedStepTargets.groupBy { target ->
+        TimeUtils.convertToBangladeshDay(target.completedAt)
+    }
+    
+    val weeklyData = mutableListOf<DayData>()
+    
+    // Generate data for each day of the week
+    for (dayIndex in 0..6) {
+        val dayDate = weekDates[dayIndex]
+        
+        // Sum all completed step targets for this day
+        val daySteps = stepTargetsByDate[dayDate]
+            ?.sumOf { it.actualSteps } ?: 0
+        
+        weeklyData.add(
+            DayData(
+                steps = daySteps.toFloat(),
+                caloriesBurned = 0f, // Not used for step chart
+                caloriesConsumed = 0f, // Not used for step chart
+                workouts = 0 // Not used for step chart
+            )
+        )
+    }
+    
+    return weeklyData
+}
+
+private fun generateYearlyStepsData(
+    completedStepTargets: List<CompletedStepTarget>,
+    userProfile: UserProfile?
+): List<DayData> {
+    val bangladeshCalendar = java.util.Calendar.getInstance(TimeUtils.getBangladeshTimeZone())
+    
+    // Get current year
+    val currentYear = bangladeshCalendar.get(java.util.Calendar.YEAR)
+    val currentMonth = bangladeshCalendar.get(java.util.Calendar.MONTH) // 0-based (0 = January)
+    
+    val yearlyData = mutableListOf<DayData>()
+    val dateFormat = SimpleDateFormat("yyyy-MM", Locale.getDefault())
+    dateFormat.timeZone = TimeUtils.getBangladeshTimeZone()
+    
+    // Group completed step targets by month
+    val stepTargetsByMonth = completedStepTargets.groupBy { target ->
+        val targetDate = Date(target.completedAt)
+        dateFormat.format(targetDate) // Format as "yyyy-MM"
+    }
+    
+    // Generate 12 months of data
+    for (monthIndex in 0..11) {
+        val monthCalendar = bangladeshCalendar.clone() as java.util.Calendar
+        monthCalendar.set(java.util.Calendar.YEAR, currentYear)
+        monthCalendar.set(java.util.Calendar.MONTH, monthIndex)
+        monthCalendar.set(java.util.Calendar.DAY_OF_MONTH, 1)
+        monthCalendar.set(java.util.Calendar.HOUR_OF_DAY, 0)
+        monthCalendar.set(java.util.Calendar.MINUTE, 0)
+        monthCalendar.set(java.util.Calendar.SECOND, 0)
+        monthCalendar.set(java.util.Calendar.MILLISECOND, 0)
+        
+        val monthString = dateFormat.format(monthCalendar.time)
+        
+        // Sum all completed step targets for this month
+        val monthSteps = stepTargetsByMonth[monthString]
+            ?.sumOf { it.actualSteps } ?: 0
+        
+        yearlyData.add(
+            DayData(
+                steps = monthSteps.toFloat(),
+                caloriesBurned = 0f, // Not used for step chart
+                caloriesConsumed = 0f, // Not used for step chart
+                workouts = 0 // Not used for step chart
+            )
+        )
+    }
+    
+    return yearlyData
 }
 
 @Preview(showBackground = true)

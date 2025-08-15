@@ -48,6 +48,8 @@ import com.example.fitpro.data.MealPlan
 import com.example.fitpro.data.MealPlanDao
 import com.example.fitpro.data.CompletedWorkoutDao
 import com.example.fitpro.data.CompletedWorkout
+import com.example.fitpro.data.CompletedStepTargetDao
+import com.example.fitpro.data.CompletedStepTarget
 import com.example.fitpro.utils.StepCounterManager
 import com.example.fitpro.utils.UserSession
 import com.example.fitpro.utils.WorkoutTimerManager
@@ -58,6 +60,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.CoroutineScope
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -68,6 +71,7 @@ fun HomeScreen(
     workoutPlanDao: WorkoutPlanDao,
     mealPlanDao: MealPlanDao,
     completedWorkoutDao: CompletedWorkoutDao,
+    completedStepTargetDao: CompletedStepTargetDao,
     stepCounterManager: StepCounterManager,
     onBMICardClick: () -> Unit
 ) {
@@ -112,12 +116,32 @@ fun HomeScreen(
         }
     }
 
-    // Sync steps with database periodically
-    LaunchedEffect(dailySteps, currentUserEmail) {
+    // Sync steps with database periodically and check target completion
+    LaunchedEffect(dailySteps, currentUserEmail, userProfile?.stepTarget, userProfile?.isStepTargetCompleted) {
         currentUserEmail?.let { email ->
             scope.launch(Dispatchers.IO) {
                 try {
                     userDao.updateSteps(email, dailySteps)
+                    
+                    // Check if step target is achieved and not yet marked as completed
+                    userProfile?.let { profile ->
+                        if (profile.stepTarget > 0 && 
+                            dailySteps >= profile.stepTarget && 
+                            !profile.isStepTargetCompleted) {
+                            
+                            // Mark target as completed
+                            userDao.updateStepTargetCompleted(email, true)
+                            
+                            // Save to completed step targets table - only save the target amount, not actual steps
+                            val completedTarget = CompletedStepTarget(
+                                userEmail = email,
+                                targetSteps = profile.stepTarget,
+                                actualSteps = profile.stepTarget, // Save target amount, not actual steps
+                                completedAt = System.currentTimeMillis()
+                            )
+                            completedStepTargetDao.insertCompletedStepTarget(completedTarget)
+                        }
+                    }
                 } catch (e: Exception) {
                     e.printStackTrace()
                 }
@@ -155,11 +179,14 @@ fun HomeScreen(
             calories = userProfile?.caloriesBurned ?: 0,
             heartRate = userProfile?.heartRate ?: 0,
             userDao = userDao,
+            completedStepTargetDao = completedStepTargetDao,
             currentUserEmail = currentUserEmail,
             calorieTarget = userProfile?.calorieTarget ?: 0,
             currentMealPlan = currentMealPlan,
             navController = navController,
-            mealPlanDao = mealPlanDao
+            mealPlanDao = mealPlanDao,
+            userProfile = userProfile,
+            stepCounterManager = stepCounterManager
         )
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -183,43 +210,7 @@ fun HomeScreen(
             modifier = Modifier.fillMaxWidth()
         )
         
-        // Test button for adding steps (for development/testing)
         Spacer(modifier = Modifier.height(16.dp))
-        
-        Button(
-            onClick = {
-                stepCounterManager.addStepsForTesting(100)
-            },
-            modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.secondary
-            )
-        ) {
-            Text("Add 100 Steps (Test)")
-        }
-        
-        Spacer(modifier = Modifier.height(16.dp))
-    }
-    
-    // Refresh button (floating action button)
-    FloatingActionButton(
-        onClick = {
-            scope.launch {
-                stepCounterManager.stopListening()
-                delay(500)
-                stepCounterManager.startListening()
-            }
-        },
-        modifier = Modifier
-            .align(Alignment.BottomEnd)
-            .padding(16.dp),
-        containerColor = MaterialTheme.colorScheme.primary
-    ) {
-        Icon(
-            Icons.Default.Refresh,
-            contentDescription = "Refresh Step Counter",
-            tint = MaterialTheme.colorScheme.onPrimary
-        )
     }
 }
 }
@@ -894,11 +885,14 @@ private fun ActivityStatsSection(
     calories: Int, 
     heartRate: Int,
     userDao: UserDao,
+    completedStepTargetDao: CompletedStepTargetDao,
     currentUserEmail: String?,
     calorieTarget: Int = 0,
     currentMealPlan: MealPlan? = null,
     navController: NavController,
-    mealPlanDao: MealPlanDao
+    mealPlanDao: MealPlanDao,
+    userProfile: UserProfile?,
+    stepCounterManager: StepCounterManager
 ) {
     var showStepTargetDialog by remember { mutableStateOf(false) }
     var showCaloriesResetDialog by remember { mutableStateOf(false) }
@@ -913,6 +907,7 @@ private fun ActivityStatsSection(
         StepCounterCard(
             steps = steps,
             stepTarget = stepTarget,
+            userProfile = userProfile,
             onClick = { showStepTargetDialog = true },
             modifier = Modifier.weight(1f)
         )
@@ -955,19 +950,12 @@ private fun ActivityStatsSection(
     if (showStepTargetDialog) {
         StepTargetDialog(
             currentTarget = stepTarget,
-            onDismiss = { showStepTargetDialog = false },
-            onTargetSet = { newTarget ->
-                currentUserEmail?.let { email ->
-                    scope.launch(Dispatchers.IO) {
-                        try {
-                            userDao.updateStepTarget(email, newTarget)
-                        } catch (e: Exception) {
-                            e.printStackTrace()
-                        }
-                    }
-                }
-                showStepTargetDialog = false
-            }
+            userProfile = userProfile,
+            userDao = userDao,
+            completedStepTargetDao = completedStepTargetDao,
+            currentUserEmail = currentUserEmail,
+            stepCounterManager = stepCounterManager,
+            onDismiss = { showStepTargetDialog = false }
         )
     }
     
@@ -1361,11 +1349,21 @@ fun MedicalAssistanceCard(modifier: Modifier = Modifier) {
 private fun StepCounterCard(
     steps: Int,
     stepTarget: Int,
+    userProfile: UserProfile?,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val progress = if (stepTarget > 0) (steps.toFloat() / stepTarget.toFloat()).coerceIn(0f, 1f) else 0f
-    val displayTarget = if (stepTarget == 0) 0 else stepTarget
+    val isTargetCompleted = userProfile?.isStepTargetCompleted == true
+    val hasTarget = stepTarget > 0
+    
+    // Calculate display values based on completion status
+    val displaySteps = if (isTargetCompleted && steps >= stepTarget) {
+        stepTarget // Show target amount when completed
+    } else {
+        minOf(steps, stepTarget) // Cap at target if not completed
+    }
+    
+    val progress = if (stepTarget > 0) (displaySteps.toFloat() / stepTarget.toFloat()).coerceIn(0f, 1f) else 0f
     
     Card(
         modifier = modifier
@@ -1379,38 +1377,74 @@ private fun StepCounterCard(
         ) {
             Icon(
                 Icons.Default.DirectionsWalk, 
-                contentDescription = "Steps"
+                contentDescription = "Steps",
+                tint = if (isTargetCompleted && steps >= stepTarget) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = "$steps",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
-            )
+            
+            // Show "Completed" when target is achieved, otherwise show current steps
+            if (isTargetCompleted && steps >= stepTarget) {
+                Text(
+                    text = "Completed",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            } else {
+                Text(
+                    text = "$steps",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            
             Text(
                 text = "Steps",
                 style = MaterialTheme.typography.bodyMedium
             )
             Spacer(modifier = Modifier.height(8.dp))
             
-            // Only show progress bar if target is set
-            if (stepTarget > 0) {
+            if (hasTarget) {
+                // Show progress bar and target info
                 LinearProgressIndicator(
                     progress = { progress },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(4.dp),
-                    color = MaterialTheme.colorScheme.primary,
+                    color = if (isTargetCompleted && steps >= stepTarget) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primary,
                     trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
                 )
                 Spacer(modifier = Modifier.height(4.dp))
+                
+                Text(
+                    text = if (isTargetCompleted && steps >= stepTarget) {
+                        "$stepTarget / $stepTarget" // Show completed as target/target
+                    } else {
+                        "$displaySteps / $stepTarget" // Show progress
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                )
+                
+                // Show achievement message only when target is just reached but not yet marked as completed
+                if (steps >= stepTarget && !isTargetCompleted) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "🎉 Target Achieved!",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            } else {
+                // Show "Set your target" message
+                Text(
+                    text = "Set your target",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Medium
+                )
             }
-            
-            Text(
-                text = "$steps / $displayTarget",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-            )
         }
     }
 }
@@ -1418,14 +1452,23 @@ private fun StepCounterCard(
 @Composable
 private fun StepTargetDialog(
     currentTarget: Int,
-    onDismiss: () -> Unit,
-    onTargetSet: (Int) -> Unit
+    userProfile: UserProfile?,
+    userDao: UserDao,
+    completedStepTargetDao: CompletedStepTargetDao,
+    currentUserEmail: String?,
+    stepCounterManager: StepCounterManager,
+    onDismiss: () -> Unit
 ) {
     var targetText by remember { 
         mutableStateOf(
             if (currentTarget == 0) "" else currentTarget.toString()
         ) 
     }
+    var showConfirmationDialog by remember { mutableStateOf(false) }
+    var newTargetValue by remember { mutableStateOf(0) }
+    val scope = rememberCoroutineScope()
+    
+    val hasActiveTarget = currentTarget > 0 && userProfile?.isStepTargetCompleted == false
     
     Dialog(onDismissRequest = onDismiss) {
         Card(
@@ -1452,7 +1495,7 @@ private fun StepTargetDialog(
                 Spacer(modifier = Modifier.height(16.dp))
                 
                 Text(
-                    text = "Set Step Target",
+                    text = if (currentTarget == 0) "Set Step Target" else "Change Step Target",
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
@@ -1461,9 +1504,14 @@ private fun StepTargetDialog(
                 Spacer(modifier = Modifier.height(8.dp))
                 
                 Text(
-                    text = "Set your daily step goal",
+                    text = if (hasActiveTarget) {
+                        "You have an active target. Changing it will reset your progress."
+                    } else {
+                        "Set your daily step goal"
+                    },
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                    color = if (hasActiveTarget) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                    textAlign = TextAlign.Center
                 )
                 
                 Spacer(modifier = Modifier.height(24.dp))
@@ -1472,12 +1520,21 @@ private fun StepTargetDialog(
                     value = targetText,
                     onValueChange = { targetText = it },
                     label = { Text("Step Target") },
-                    placeholder = { Text("0000") },
+                    placeholder = { Text("10000") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     shape = RoundedCornerShape(12.dp)
                 )
+                
+                if (currentTarget > 0) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = "Current target: $currentTarget steps",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    )
+                }
                 
                 Spacer(modifier = Modifier.height(24.dp))
                 
@@ -1498,7 +1555,21 @@ private fun StepTargetDialog(
                         onClick = {
                             val target = targetText.toIntOrNull()
                             if (target != null && target > 0) {
-                                onTargetSet(target)
+                                newTargetValue = target
+                                if (hasActiveTarget && target != currentTarget) {
+                                    // Show confirmation dialog for active target
+                                    showConfirmationDialog = true
+                                } else {
+                                    // Set target directly
+                                    setStepTarget(
+                                        target = target,
+                                        userDao = userDao,
+                                        currentUserEmail = currentUserEmail,
+                                        stepCounterManager = stepCounterManager,
+                                        scope = scope,
+                                        onComplete = onDismiss
+                                    )
+                                }
                             }
                         },
                         modifier = Modifier.weight(1f),
@@ -1510,6 +1581,81 @@ private fun StepTargetDialog(
             }
         }
     }
+    
+    // Confirmation dialog for overwriting active target
+    if (showConfirmationDialog) {
+        AlertDialog(
+            onDismissRequest = { showConfirmationDialog = false },
+            icon = {
+                Icon(
+                    Icons.Default.Warning,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(24.dp)
+                )
+            },
+            title = {
+                Text("Replace Active Target?")
+            },
+            text = {
+                Text("You have an active step target. Changing it will reset your progress. Are you sure?")
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        setStepTarget(
+                            target = newTargetValue,
+                            userDao = userDao,
+                            currentUserEmail = currentUserEmail,
+                            stepCounterManager = stepCounterManager,
+                            scope = scope,
+                            onComplete = {
+                                showConfirmationDialog = false
+                                onDismiss()
+                            }
+                        )
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Text("Replace")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showConfirmationDialog = false }
+                ) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+}
+
+private fun setStepTarget(
+    target: Int,
+    userDao: UserDao,
+    currentUserEmail: String?,
+    stepCounterManager: StepCounterManager,
+    scope: CoroutineScope,
+    onComplete: () -> Unit
+) {
+    currentUserEmail?.let { email ->
+        scope.launch(Dispatchers.IO) {
+            try {
+                userDao.updateStepTarget(email, target)
+                userDao.updateStepTargetCompleted(email, false) // Reset completion status
+                userDao.updateSteps(email, 0) // Reset step count to 0 for new target
+                
+                // Reset the step counter manager as well
+                stepCounterManager.resetSteps()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+    onComplete()
 }
 
 @Composable

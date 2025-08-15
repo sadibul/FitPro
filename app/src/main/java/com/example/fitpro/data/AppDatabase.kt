@@ -9,8 +9,8 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import java.util.concurrent.Executors
 
 @Database(
-    entities = [UserProfile::class, WorkoutPlan::class, MealPlan::class, CompletedWorkout::class],
-    version = 16, // Incremented version for CompletedWorkout table
+    entities = [UserProfile::class, WorkoutPlan::class, MealPlan::class, CompletedWorkout::class, CompletedStepTarget::class],
+    version = 17, // Incremented version for CompletedStepTarget table and isStepTargetCompleted field
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -18,6 +18,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun workoutPlanDao(): WorkoutPlanDao
     abstract fun mealPlanDao(): MealPlanDao
     abstract fun completedWorkoutDao(): CompletedWorkoutDao
+    abstract fun completedStepTargetDao(): CompletedStepTargetDao
 
     companion object {
         @Volatile
@@ -118,6 +119,25 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        // Migration from version 16 to 17
+        private val MIGRATION_16_17 = object : Migration(16, 17) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                // Add isStepTargetCompleted column to user_profile table
+                database.execSQL("ALTER TABLE user_profile ADD COLUMN isStepTargetCompleted INTEGER NOT NULL DEFAULT 0")
+                
+                // Create completed_step_targets table
+                database.execSQL("""
+                    CREATE TABLE completed_step_targets (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        userEmail TEXT NOT NULL,
+                        targetSteps INTEGER NOT NULL,
+                        actualSteps INTEGER NOT NULL,
+                        completedAt INTEGER NOT NULL
+                    )
+                """)
+            }
+        }
+
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -125,7 +145,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "fitpro_database"
                 )
-                    .addMigrations(MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16) // Add new migration
+                    .addMigrations(MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17) // Add new migration
                     .fallbackToDestructiveMigration() // Fallback for other migrations
                     .fallbackToDestructiveMigrationOnDowngrade()
                     .setQueryExecutor(databaseExecutor) // Use dedicated executor

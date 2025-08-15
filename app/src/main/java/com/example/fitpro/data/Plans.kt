@@ -39,3 +39,12 @@ data class CompletedWorkout(
     val actualDuration: Int, // actual time spent (could be different if user stops early)
     val completedAt: Long = System.currentTimeMillis()
 )
+
+@Entity(tableName = "completed_step_targets")
+data class CompletedStepTarget(
+    @PrimaryKey(autoGenerate = true) val id: Int = 0,
+    val userEmail: String,
+    val targetSteps: Int,
+    val actualSteps: Int,
+    val completedAt: Long = System.currentTimeMillis()
+)

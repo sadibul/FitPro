@@ -41,6 +41,12 @@ interface UserDao {
     @Query("UPDATE user_profile SET calorieTarget = :target WHERE email = :email")
     suspend fun updateCalorieTarget(email: String, target: Int)
     
+    @Query("UPDATE user_profile SET isStepTargetCompleted = :completed WHERE email = :email")
+    suspend fun updateStepTargetCompleted(email: String, completed: Boolean)
+    
+    @Query("UPDATE user_profile SET stepTarget = :target, isStepTargetCompleted = :completed WHERE email = :email")
+    suspend fun updateStepTargetAndStatus(email: String, target: Int, completed: Boolean)
+    
     @Query("SELECT EXISTS(SELECT 1 FROM user_profile WHERE email = :email)")
     suspend fun userExists(email: String): Boolean
 }
