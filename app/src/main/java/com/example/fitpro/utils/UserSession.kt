@@ -37,9 +37,7 @@ class UserSession(context: Context) {
     
     fun logout() {
         prefs.edit().apply {
-            remove(KEY_CURRENT_USER_EMAIL)
-            putBoolean(KEY_IS_LOGGED_IN, false)
-            putBoolean(KEY_REMEMBER_ME, false)
+            clear() // Clear all session data completely
             apply()
         }
     }

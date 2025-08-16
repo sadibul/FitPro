@@ -201,8 +201,17 @@ fun AccountScreen(
             
             // Logout Button
             LogoutButton(onLogoutClick = {
-                userSession.logout()
-                onLogout()
+                try {
+                    // Clear session first
+                    userSession.logout()
+                    // Then trigger the logout callback
+                    onLogout()
+                    android.util.Log.d("AccountScreen", "User logged out successfully")
+                } catch (e: Exception) {
+                    android.util.Log.e("AccountScreen", "Error during logout", e)
+                    // Still trigger logout even if there's an error
+                    onLogout()
+                }
             })
         }
     }
@@ -548,28 +557,51 @@ private fun SettingsButton() {
 
 @Composable
 private fun LogoutButton(onLogoutClick: () -> Unit) {
+    var isLoggingOut by remember { mutableStateOf(false) }
+    
     Button(
-        onClick = onLogoutClick,
+        onClick = {
+            if (!isLoggingOut) {
+                isLoggingOut = true
+                onLogoutClick()
+            }
+        },
         modifier = Modifier
             .fillMaxWidth()
             .height(50.dp),
         colors = ButtonDefaults.buttonColors(
-            containerColor = Color(0xFF2196F3)
+            containerColor = if (isLoggingOut) Color.Gray else Color(0xFF2196F3)
         ),
-        shape = RoundedCornerShape(12.dp)
+        shape = RoundedCornerShape(12.dp),
+        enabled = !isLoggingOut
     ) {
-        Icon(
-            imageVector = Icons.Default.ExitToApp,
-            contentDescription = null,
-            tint = Color.White
-        )
-        Spacer(modifier = Modifier.width(8.dp))
-        Text(
-            text = "Log Out",
-            color = Color.White,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Medium
-        )
+        if (isLoggingOut) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(20.dp),
+                color = Color.White,
+                strokeWidth = 2.dp
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = "Logging out...",
+                color = Color.White,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Medium
+            )
+        } else {
+            Icon(
+                imageVector = Icons.Default.ExitToApp,
+                contentDescription = null,
+                tint = Color.White
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = "Log Out",
+                color = Color.White,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Medium
+            )
+        }
     }
 }
 

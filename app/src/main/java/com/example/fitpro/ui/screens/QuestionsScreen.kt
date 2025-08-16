@@ -140,8 +140,8 @@ fun QuestionsScreen(
                             userDao.insertUser(userProfile)
                         }
                         
-                        // Save user session with remember me enabled for new users
-                        userSession.saveUserSession(userEmail, true)
+                        // Save user session without remember me for new users
+                        userSession.saveUserSession(userEmail, false)
                         
                         // Complete on main thread
                         onQuestionsComplete()

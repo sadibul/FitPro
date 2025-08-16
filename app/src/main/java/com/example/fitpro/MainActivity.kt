@@ -237,9 +237,11 @@ fun FitProApp() {
                         delay(300) // Brief delay for UI stability
                         val currentEmail = userSession.getCurrentUserEmail()
                         val shouldRemember = userSession.shouldRememberUser()
+                        val isSessionValid = userSession.isLoggedIn()
                         
                         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                            isLoggedIn = currentEmail != null && shouldRemember
+                            // Only consider user logged in if session is valid AND should remember
+                            isLoggedIn = currentEmail != null && shouldRemember && isSessionValid
                             sessionChecked = true
                         }
                     }
@@ -265,8 +267,8 @@ fun FitProApp() {
                     }
                 }
                 
-                // Show main app if user is logged in or should be remembered
-                if (isLoggedIn || (shouldRememberUser && currentUserEmail != null)) {
+                // Show main app only if explicitly logged in and session is valid
+                if (isLoggedIn && currentUserEmail != null && userSession.isLoggedIn()) {
                     MainAppWithBottomNav(
                         userDao = userDao!!,
                         workoutPlanDao = workoutPlanDao!!,
@@ -278,15 +280,18 @@ fun FitProApp() {
                         onLogout = { 
                             // Handle logout by clearing all data and session
                             stepCounterManager!!.clearUserData()
-                            // Also clear the session in case it wasn't called from AccountScreen
+                            // Force clear all session data
                             val userSession = UserSession(context)
                             userSession.logout()
+                            // Force update login state
                             isLoggedIn = false
+                            // Reset session check to trigger re-evaluation
+                            sessionChecked = false
                         }
                     )
                 } else {
-                    // Use key to reset navigation state on logout
-                    key(isLoggedIn) {
+                    // Always start fresh at login when not logged in
+                    key(isLoggedIn, sessionChecked) {
                         AuthNavigation(
                             navController = navController,
                             userDao = userDao!!,
