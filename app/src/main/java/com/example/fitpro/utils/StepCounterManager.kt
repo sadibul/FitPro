@@ -21,16 +21,30 @@ class StepCounterManager(private val context: Context) : SensorEventListener {
     private val preferences: SharedPreferences = 
         context.getSharedPreferences("step_counter", Context.MODE_PRIVATE)
     
-    private val _dailySteps = MutableStateFlow(getTodaysSteps())
+    // Current user email for user-specific step tracking
+    private var currentUserEmail: String? = null
+    
+    private val _dailySteps = MutableStateFlow(0)
     val dailySteps: StateFlow<Int> = _dailySteps.asStateFlow()
     
     private var isListening = false
     private var initialStepCount = 0
     private var hasInitialCount = false
     
+    // Set current user for step tracking
+    fun setCurrentUser(userEmail: String?) {
+        if (currentUserEmail != userEmail) {
+            currentUserEmail = userEmail
+            // Reset and load steps for the new user
+            hasInitialCount = false
+            initialStepCount = 0
+            _dailySteps.value = getTodaysSteps()
+            resetStepsIfNewDay()
+        }
+    }
+    
     init {
-        // Reset steps if it's a new day
-        resetStepsIfNewDay()
+        // Don't reset steps here, wait for user to be set
     }
     
     fun startListening() {
@@ -84,42 +98,64 @@ class StepCounterManager(private val context: Context) : SensorEventListener {
         return TimeUtils.getBangladeshDateString()
     }
     
+    private fun getUserStepKey(suffix: String): String {
+        return if (currentUserEmail != null) {
+            "${currentUserEmail}_${suffix}_${getTodayString()}"
+        } else {
+            "guest_${suffix}_${getTodayString()}"
+        }
+    }
+    
     private fun getTodaysSteps(): Int {
-        return preferences.getInt("steps_${getTodayString()}", 0)
+        return if (currentUserEmail != null) {
+            preferences.getInt(getUserStepKey("steps"), 0)
+        } else {
+            0 // No steps for users without login
+        }
     }
     
     private fun updateTodaysSteps(steps: Int) {
+        if (currentUserEmail == null) return // Don't track steps without user
+        
         val validSteps = maxOf(0, steps) // Ensure steps is never negative
         val currentSteps = getTodaysSteps()
         
         // Only update if steps increased or it's the first update
         if (validSteps >= currentSteps || currentSteps == 0) {
             preferences.edit()
-                .putInt("steps_${getTodayString()}", validSteps)
+                .putInt(getUserStepKey("steps"), validSteps)
                 .apply()
             _dailySteps.value = validSteps
         }
     }
     
     private fun getTodaysInitialCount(): Int {
-        return preferences.getInt("initial_count_${getTodayString()}", 0)
+        return if (currentUserEmail != null) {
+            preferences.getInt(getUserStepKey("initial_count"), 0)
+        } else {
+            0
+        }
     }
     
     private fun saveTodaysInitialCount(count: Int) {
+        if (currentUserEmail == null) return
+        
         preferences.edit()
-            .putInt("initial_count_${getTodayString()}", count)
+            .putInt(getUserStepKey("initial_count"), count)
             .apply()
     }
     
     private fun resetStepsIfNewDay() {
-        val lastSavedDate = preferences.getString("last_date", "")
+        if (currentUserEmail == null) return
+        
+        val lastSavedDate = preferences.getString("${currentUserEmail}_last_date", "")
         val today = getTodayString()
         
         if (lastSavedDate != today) {
-            // New day, reset step count
+            // New day, reset step count for this user
             preferences.edit()
-                .putInt("steps_$today", 0)
-                .putString("last_date", today)
+                .putInt(getUserStepKey("steps"), 0)
+                .putString("${currentUserEmail}_last_date", today)
                 .apply()
             _dailySteps.value = 0
             hasInitialCount = false
@@ -138,12 +174,23 @@ class StepCounterManager(private val context: Context) : SensorEventListener {
     
     // Method to reset steps to 0 (for new targets)
     fun resetSteps() {
+        if (currentUserEmail == null) return
+        
         val today = getTodayString()
         preferences.edit()
-            .putInt("steps_$today", 0)
+            .putInt(getUserStepKey("steps"), 0)
             .apply()
         _dailySteps.value = 0
         hasInitialCount = false
         initialStepCount = 0
+    }
+    
+    // Method to clear user data on logout
+    fun clearUserData() {
+        currentUserEmail = null
+        _dailySteps.value = 0
+        hasInitialCount = false
+        initialStepCount = 0
+        stopListening()
     }
 }

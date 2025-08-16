@@ -37,6 +37,7 @@ import com.example.fitpro.R
 import com.example.fitpro.Screen
 import com.example.fitpro.data.UserDao
 import com.example.fitpro.data.UserProfile
+import com.example.fitpro.utils.ImageUtils
 import com.example.fitpro.utils.UserSession
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -58,21 +59,61 @@ fun AccountScreen(
     val userProfile by userFlow.collectAsStateWithLifecycle(initialValue = null)
     val coroutineScope = rememberCoroutineScope()
     
+    val context = LocalContext.current
     var showEditProfileDialog by remember { mutableStateOf(false) }
     
-    // Profile image picker
-    var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
+    // Ensure profile image exists in internal storage
+    LaunchedEffect(userProfile) {
+        userProfile?.let { profile ->
+            // If the profile has an image URI but the file doesn't exist, try to find it
+            if (profile.profileImageUri != null) {
+                val file = java.io.File(profile.profileImageUri!!)
+                if (!file.exists()) {
+                    // Try to find the image in our internal storage
+                    val savedImageUri = ImageUtils.getUserProfileImageUri(context, currentUserEmail)
+                    if (savedImageUri != null && savedImageUri != profile.profileImageUri) {
+                        // Update the profile with the correct URI
+                        coroutineScope.launch(Dispatchers.IO) {
+                            try {
+                                val updatedProfile = profile.copy(profileImageUri = savedImageUri)
+                                userDao.updateUser(updatedProfile)
+                                android.util.Log.d("AccountScreen", "Profile image URI corrected: $savedImageUri")
+                            } catch (e: Exception) {
+                                android.util.Log.e("AccountScreen", "Error correcting profile image URI", e)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    // Profile image picker launcher
     val imagePickerLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
-        uri?.let { 
-            selectedImageUri = it
-            // Update profile image in database
+        uri?.let { selectedUri ->
+            // Update profile image in database immediately
             userProfile?.let { profile ->
-                coroutineScope.launch(Dispatchers.IO) {
+                coroutineScope.launch {
                     try {
-                        val updatedProfile = profile.copy(profileImageUri = uri.toString())
-                        userDao.updateUser(updatedProfile)
+                        // Copy image to internal storage
+                        val savedImageUri = ImageUtils.copyImageToInternalStorage(
+                            context = context,
+                            sourceUri = selectedUri,
+                            userEmail = currentUserEmail
+                        )
+                        
+                        if (savedImageUri != null) {
+                            // Update profile with the saved image URI
+                            val updatedProfile = profile.copy(profileImageUri = savedImageUri)
+                            withContext(Dispatchers.IO) {
+                                userDao.updateUser(updatedProfile)
+                            }
+                            android.util.Log.d("AccountScreen", "Profile image updated successfully: $savedImageUri")
+                        } else {
+                            android.util.Log.e("AccountScreen", "Failed to save image to internal storage")
+                        }
                     } catch (e: Exception) {
                         android.util.Log.e("AccountScreen", "Error updating profile image", e)
                     }
@@ -120,7 +161,7 @@ fun AccountScreen(
             
             // Profile Picture Section
             ProfileImageSection(
-                profileImageUri = userProfile?.profileImageUri ?: selectedImageUri?.toString(),
+                profileImageUri = userProfile?.profileImageUri,
                 onImageClick = { imagePickerLauncher.launch("image/*") }
             )
             
@@ -218,7 +259,11 @@ private fun ProfileImageSection(
                 modifier = Modifier
                     .size(120.dp)
                     .clip(CircleShape),
-                contentScale = ContentScale.Crop
+                contentScale = ContentScale.Crop,
+                error = painterResource(R.drawable.ic_launcher_foreground), // Fallback on error
+                onError = { 
+                    android.util.Log.e("ProfileImage", "Failed to load image: $profileImageUri")
+                }
             )
         } else {
             // Default blue circle with dash

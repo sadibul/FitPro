@@ -28,6 +28,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.core.content.ContextCompat
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -37,8 +38,11 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.layout.ContentScale
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
+import coil.compose.AsyncImage
+import com.example.fitpro.R
 import com.example.fitpro.Screen
 import com.example.fitpro.data.UserProfile
 import com.example.fitpro.data.UserDao
@@ -157,7 +161,10 @@ fun HomeScreen(
                 .padding(16.dp)
         ) {
         // Welcome Section
-        WelcomeSection(userProfile?.name ?: "User")
+        WelcomeSection(
+            name = userProfile?.name ?: "User",
+            profileImageUri = userProfile?.profileImageUri
+        )
 
         Spacer(modifier = Modifier.height(24.dp))
 
@@ -216,7 +223,10 @@ fun HomeScreen(
 }
 
 @Composable
-private fun WelcomeSection(name: String) {
+private fun WelcomeSection(
+    name: String,
+    profileImageUri: String? = null
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -233,19 +243,34 @@ private fun WelcomeSection(name: String) {
                 fontWeight = FontWeight.Bold
             )
         }
-        // Profile Picture Placeholder
+        // Profile Picture
         Surface(
             modifier = Modifier
                 .size(50.dp)
                 .clip(RoundedCornerShape(25.dp)),
             color = MaterialTheme.colorScheme.primary
         ) {
-            Icon(
-                Icons.Default.Person,
-                contentDescription = "Profile",
-                modifier = Modifier.padding(8.dp),
-                tint = MaterialTheme.colorScheme.onPrimary
-            )
+            if (profileImageUri != null) {
+                AsyncImage(
+                    model = profileImageUri,
+                    contentDescription = "Profile Picture",
+                    modifier = Modifier
+                        .size(50.dp)
+                        .clip(RoundedCornerShape(25.dp)),
+                    contentScale = ContentScale.Crop,
+                    error = painterResource(R.drawable.ic_launcher_foreground), // Fallback on error
+                    onError = { 
+                        android.util.Log.e("HomeScreen", "Failed to load profile image: $profileImageUri")
+                    }
+                )
+            } else {
+                Icon(
+                    Icons.Default.Person,
+                    contentDescription = "Profile",
+                    modifier = Modifier.padding(8.dp),
+                    tint = MaterialTheme.colorScheme.onPrimary
+                )
+            }
         }
     }
 }
@@ -288,7 +313,7 @@ private fun CurrentPlanSection(
             ) {
                 items(
                     items = workoutPlans,
-                    key = { it.id } // Add key for better performance
+                    key = { it.id }
                 ) { workout ->
                     WorkoutCard(
                         workout = workout,
@@ -301,7 +326,7 @@ private fun CurrentPlanSection(
                                 try {
                                     workoutPlanDao.deleteWorkoutPlan(workout)
                                 } catch (e: Exception) {
-                                    // Handle deletion error gracefully
+
                                     e.printStackTrace()
                                 }
                             }
@@ -310,7 +335,7 @@ private fun CurrentPlanSection(
                 }
             }
         } else {
-            // Add Button when no workouts
+
             Card(
                 modifier = Modifier
                     .fillMaxWidth()

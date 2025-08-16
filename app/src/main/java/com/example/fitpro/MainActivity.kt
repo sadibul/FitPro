@@ -223,16 +223,25 @@ fun FitProApp() {
             val userSession = remember { UserSession(context) }
             var sessionChecked by remember { mutableStateOf(false) }
             
+            // Reset sessionChecked when user logs out to ensure fresh auth flow
+            LaunchedEffect(isLoggedIn) {
+                if (!isLoggedIn) {
+                    sessionChecked = true // Immediately mark as checked when logged out
+                }
+            }
+            
             // Check session state on startup with background thread
             LaunchedEffect(Unit) {
-                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                    delay(300) // Brief delay for UI stability
-                    val currentEmail = userSession.getCurrentUserEmail()
-                    val shouldRemember = userSession.shouldRememberUser()
-                    
-                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                        isLoggedIn = currentEmail != null && shouldRemember
-                        sessionChecked = true
+                if (!sessionChecked) {
+                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                        delay(300) // Brief delay for UI stability
+                        val currentEmail = userSession.getCurrentUserEmail()
+                        val shouldRemember = userSession.shouldRememberUser()
+                        
+                        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                            isLoggedIn = currentEmail != null && shouldRemember
+                            sessionChecked = true
+                        }
                     }
                 }
             }
@@ -267,17 +276,24 @@ fun FitProApp() {
                         stepCounterManager = stepCounterManager!!,
                         userEmail = currentUserEmail ?: "",
                         onLogout = { 
-                            // Handle logout by updating the login state
+                            // Handle logout by clearing all data and session
+                            stepCounterManager!!.clearUserData()
+                            // Also clear the session in case it wasn't called from AccountScreen
+                            val userSession = UserSession(context)
+                            userSession.logout()
                             isLoggedIn = false
                         }
                     )
                 } else {
-                    AuthNavigation(
-                        navController = navController,
-                        userDao = userDao!!,
-                        userSession = userSession,
-                        onLoginSuccess = { isLoggedIn = true }
-                    )
+                    // Use key to reset navigation state on logout
+                    key(isLoggedIn) {
+                        AuthNavigation(
+                            navController = navController,
+                            userDao = userDao!!,
+                            userSession = userSession,
+                            onLoginSuccess = { isLoggedIn = true }
+                        )
+                    }
                 }
             }
         }
@@ -352,6 +368,11 @@ fun MainAppWithBottomNav(
     val userSession = remember { UserSession(context) }
     val userProfileFlow = remember(userEmail) {
         userDao.getUserProfile(userEmail)
+    }
+    
+    // Set current user for step tracking when component loads
+    LaunchedEffect(userEmail) {
+        stepCounterManager.setCurrentUser(userEmail)
     }
     
     val navController = rememberNavController()
