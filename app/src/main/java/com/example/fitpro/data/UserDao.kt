@@ -49,4 +49,10 @@ interface UserDao {
     
     @Query("SELECT EXISTS(SELECT 1 FROM user_profile WHERE email = :email)")
     suspend fun userExists(email: String): Boolean
+    
+    @Query("DELETE FROM user_profile WHERE email = :email")
+    suspend fun deleteUser(email: String)
+    
+    @Query("DELETE FROM user_profile")
+    suspend fun deleteAllUsers()
 }

@@ -31,6 +31,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
+import androidx.navigation.NavType
 import com.example.fitpro.data.AppDatabase
 import com.example.fitpro.data.CompletedWorkoutDao
 import com.example.fitpro.data.CompletedStepTargetDao
@@ -227,13 +229,16 @@ fun FitProApp() {
             LaunchedEffect(Unit) {
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                     delay(300) // Brief delay for UI stability
+                    
+                    // Clear session if remember me was not checked
+                    userSession.clearSessionIfNotRemembered()
+                    
                     val currentEmail = userSession.getCurrentUserEmail()
                     val shouldRemember = userSession.shouldRememberUser()
-                    val isSessionValid = userSession.isLoggedIn()
                     
                     kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                        // User is logged in if they have an active session or if they chose to be remembered
-                        isLoggedIn = (currentEmail != null && isSessionValid) || (currentEmail != null && shouldRemember)
+                        // Only set logged in if user exists AND remember me was checked
+                        isLoggedIn = currentEmail != null && shouldRemember
                         sessionChecked = true
                     }
                 }
@@ -258,8 +263,8 @@ fun FitProApp() {
                     }
                 }
                 
-                // Show main app if user is logged in or should be remembered
-                if (isLoggedIn && currentUserEmail != null) {
+                // Only show main app if user should be remembered AND has valid email
+                if (shouldRememberUser && currentUserEmail != null) {
                     MainAppWithBottomNav(
                         userDao = userDao!!,
                         workoutPlanDao = workoutPlanDao!!,
@@ -267,9 +272,9 @@ fun FitProApp() {
                         completedWorkoutDao = completedWorkoutDao!!,
                         completedStepTargetDao = completedStepTargetDao!!,
                         stepCounterManager = stepCounterManager!!,
-                        userEmail = currentUserEmail,
+                        userEmail = currentUserEmail ?: "",
                         onLogout = { 
-                            // Handle logout by updating the login state
+                            // Handle logout by clearing session and updating the login state
                             userSession.logout()
                             isLoggedIn = false
                         }
@@ -322,7 +327,14 @@ fun AuthNavigation(
                 userDao = userDao
             )
         }
-        composable(Screen.Questions.route) { backStackEntry ->
+        composable(
+            Screen.Questions.route,
+            arguments = listOf(
+                navArgument("name") { type = NavType.StringType },
+                navArgument("email") { type = NavType.StringType },
+                navArgument("password") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
             val name = backStackEntry.arguments?.getString("name") ?: ""
             val email = backStackEntry.arguments?.getString("email") ?: ""
             val password = backStackEntry.arguments?.getString("password") ?: ""

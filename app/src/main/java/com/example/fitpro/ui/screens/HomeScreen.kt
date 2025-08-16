@@ -27,6 +27,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import androidx.compose.ui.text.font.FontStyle
@@ -39,6 +40,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
+import coil.compose.AsyncImage
 import com.example.fitpro.Screen
 import com.example.fitpro.data.UserProfile
 import com.example.fitpro.data.UserDao
@@ -157,7 +159,10 @@ fun HomeScreen(
                 .padding(16.dp)
         ) {
         // Welcome Section
-        WelcomeSection(userProfile?.name ?: "User")
+        WelcomeSection(
+            name = userProfile?.name ?: "User",
+            userProfile = userProfile
+        )
 
         Spacer(modifier = Modifier.height(24.dp))
 
@@ -216,7 +221,10 @@ fun HomeScreen(
 }
 
 @Composable
-private fun WelcomeSection(name: String) {
+private fun WelcomeSection(
+    name: String,
+    userProfile: UserProfile?
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -233,19 +241,28 @@ private fun WelcomeSection(name: String) {
                 fontWeight = FontWeight.Bold
             )
         }
-        // Profile Picture Placeholder
+        // Profile Picture
         Surface(
             modifier = Modifier
                 .size(50.dp)
                 .clip(RoundedCornerShape(25.dp)),
             color = MaterialTheme.colorScheme.primary
         ) {
-            Icon(
-                Icons.Default.Person,
-                contentDescription = "Profile",
-                modifier = Modifier.padding(8.dp),
-                tint = MaterialTheme.colorScheme.onPrimary
-            )
+            if (userProfile?.profileImageUri != null) {
+                AsyncImage(
+                    model = userProfile.profileImageUri,
+                    contentDescription = "Profile",
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                Icon(
+                    Icons.Default.Person,
+                    contentDescription = "Profile",
+                    modifier = Modifier.padding(8.dp),
+                    tint = MaterialTheme.colorScheme.onPrimary
+                )
+            }
         }
     }
 }

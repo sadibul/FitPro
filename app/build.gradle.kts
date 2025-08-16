@@ -119,12 +119,12 @@ dependencies {
     // Splash Screen API
     implementation("androidx.core:core-splashscreen:1.0.1")
 
+    // Image loading with Coil
+    implementation("io.coil-kt:coil-compose:2.7.0")
+
     // Accompanist
     implementation("com.google.accompanist:accompanist-systemuicontroller:0.34.0")
     implementation("com.google.accompanist:accompanist-permissions:0.34.0")
-
-    // Image loading with Coil
-    implementation("io.coil-kt:coil-compose:2.5.0")
 
     // Core library desugaring
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")

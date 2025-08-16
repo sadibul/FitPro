@@ -22,13 +22,13 @@ class UserSession(context: Context) {
     }
     
     fun getCurrentUserEmail(): String? {
-        return if (isLoggedIn()) {
+        return if (shouldRememberUser()) {
             prefs.getString(KEY_CURRENT_USER_EMAIL, null)
         } else null
     }
     
     fun isLoggedIn(): Boolean {
-        return prefs.getBoolean(KEY_IS_LOGGED_IN, false)
+        return prefs.getBoolean(KEY_IS_LOGGED_IN, false) && shouldRememberUser()
     }
     
     fun shouldRememberUser(): Boolean {
@@ -39,17 +39,22 @@ class UserSession(context: Context) {
         prefs.edit().apply {
             remove(KEY_CURRENT_USER_EMAIL)
             putBoolean(KEY_IS_LOGGED_IN, false)
-            // Only clear remember me if it was explicitly logged out
-            // This ensures proper remember me functionality
-            remove(KEY_REMEMBER_ME)
+            putBoolean(KEY_REMEMBER_ME, false)
             apply()
         }
     }
     
-    fun clearSession() {
-        prefs.edit().apply {
-            clear()
-            apply()
+    fun clearAllData() {
+        prefs.edit().clear().apply()
+    }
+    
+    fun clearSessionIfNotRemembered() {
+        if (!shouldRememberUser()) {
+            prefs.edit().apply {
+                remove(KEY_CURRENT_USER_EMAIL)
+                putBoolean(KEY_IS_LOGGED_IN, false)
+                apply()
+            }
         }
     }
 }
