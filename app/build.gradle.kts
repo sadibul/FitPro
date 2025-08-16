@@ -116,6 +116,9 @@ dependencies {
     // Extended Icons
     implementation("androidx.compose.material:material-icons-extended:1.7.6")
 
+    // Image loading
+    implementation("io.coil-kt:coil-compose:2.6.0")
+
     // Splash Screen API
     implementation("androidx.core:core-splashscreen:1.0.1")
 

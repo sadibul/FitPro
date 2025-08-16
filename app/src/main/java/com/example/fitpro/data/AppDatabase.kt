@@ -10,7 +10,7 @@ import java.util.concurrent.Executors
 
 @Database(
     entities = [UserProfile::class, WorkoutPlan::class, MealPlan::class, CompletedWorkout::class, CompletedStepTarget::class],
-    version = 17, // Incremented version for CompletedStepTarget table and isStepTargetCompleted field
+    version = 18, // Incremented version for profileImageUri field
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -138,6 +138,14 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        // Migration from version 17 to 18
+        private val MIGRATION_17_18 = object : Migration(17, 18) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                // Add profileImageUri column to user_profile table
+                database.execSQL("ALTER TABLE user_profile ADD COLUMN profileImageUri TEXT")
+            }
+        }
+
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -145,7 +153,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "fitpro_database"
                 )
-                    .addMigrations(MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17) // Add new migration
+                    .addMigrations(MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18) // Add new migration
                     .fallbackToDestructiveMigration() // Fallback for other migrations
                     .fallbackToDestructiveMigrationOnDowngrade()
                     .setQueryExecutor(databaseExecutor) // Use dedicated executor

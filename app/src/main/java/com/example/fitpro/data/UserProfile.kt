@@ -13,6 +13,7 @@ data class UserProfile(
     val age: Int,
     val weight: Float,
     val height: Int,
+    val profileImageUri: String? = null, // Profile image URI
     val currentPlan: String = "Weight Loss Plan", // Default plan
     val dailySteps: Int = 0,
     val caloriesBurned: Int = 0,
