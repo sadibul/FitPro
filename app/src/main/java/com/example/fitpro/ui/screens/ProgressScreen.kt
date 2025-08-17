@@ -81,16 +81,6 @@ fun ProgressScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Today's Progress Section
-            item {
-                ActivityProgressCard(
-                    steps = userProfile?.dailySteps ?: 0,
-                    targetSteps = userProfile?.stepTarget ?: 10000,
-                    calories = userProfile?.caloriesBurned ?: 0,
-                    targetCalories = userProfile?.calorieTarget ?: 500
-                )
-            }
-
             // Steps Chart
             item {
                 val weeklyData = remember(completedStepTargets, allMealPlans, userProfile) {
@@ -893,9 +883,22 @@ private fun SandowScoreChart(
                                     horizontalAlignment = Alignment.CenterHorizontally,
                                     modifier = Modifier.weight(1f)
                                 ) {
-                                    // Highlight bar (Tuesday for Weekly, current month for Yearly)
+                                    // Highlight bar (current day for Weekly, current month for Yearly)
                                     val isHighlighted = if (currentPeriod == "Weekly") {
-                                        index == 1 // Tuesday
+                                        // Calculate current day index dynamically
+                                        val bangladeshCalendar = java.util.Calendar.getInstance(TimeUtils.getBangladeshTimeZone())
+                                        val currentDayOfWeek = bangladeshCalendar.get(java.util.Calendar.DAY_OF_WEEK)
+                                        val currentDayIndex = when (currentDayOfWeek) {
+                                            java.util.Calendar.SUNDAY -> 6 // Sunday is last in our Mon-Sun order
+                                            java.util.Calendar.MONDAY -> 0
+                                            java.util.Calendar.TUESDAY -> 1
+                                            java.util.Calendar.WEDNESDAY -> 2
+                                            java.util.Calendar.THURSDAY -> 3
+                                            java.util.Calendar.FRIDAY -> 4
+                                            java.util.Calendar.SATURDAY -> 5
+                                            else -> 0
+                                        }
+                                        index == currentDayIndex
                                     } else {
                                         index == 7 // August (current month)
                                     }
@@ -1055,23 +1058,74 @@ private fun generateWeeklyData(
         // Calculate actual steps for this day
         // For current day, use the dailySteps from userProfile
         // For other days, we don't have historical data yet, so show 0
-        val actualSteps = if (dayIndex == (currentDayOfWeek - 1)) { // currentDayOfWeek is 1-based, dayIndex is 0-based
+        // Map Calendar day of week to our array index (0=Sunday, 1=Monday, etc.)
+        val currentDayIndex = when (currentDayOfWeek) {
+            java.util.Calendar.SUNDAY -> 0
+            java.util.Calendar.MONDAY -> 1
+            java.util.Calendar.TUESDAY -> 2
+            java.util.Calendar.WEDNESDAY -> 3
+            java.util.Calendar.THURSDAY -> 4
+            java.util.Calendar.FRIDAY -> 5
+            java.util.Calendar.SATURDAY -> 6
+            else -> 0
+        }
+        
+        val actualSteps = if (dayIndex == currentDayIndex) {
             (userProfile?.dailySteps ?: 0).toFloat()
         } else {
             0f // No historical step data available for other days
         }
         
+        // Add current user's calories burned for today
+        val finalCaloriesBurned = if (dayIndex == currentDayIndex && userProfile != null) {
+            dayCaloriesBurned + userProfile.caloriesBurned
+        } else {
+            dayCaloriesBurned
+        }
+        
         weeklyData.add(
             DayData(
                 steps = actualSteps,
-                caloriesBurned = dayCaloriesBurned.toFloat(),
+                caloriesBurned = finalCaloriesBurned.toFloat(),
                 caloriesConsumed = dayCaloriesConsumed.toFloat(),
                 workouts = dayWorkoutDuration // Use duration instead of count
             )
         )
     }
     
-    return weeklyData
+    // Reorder data to match chart's Monday-Sunday order
+    // weeklyData is currently in Sunday-Saturday order (0=Sun, 1=Mon, ..., 6=Sat)
+    // Chart expects Monday-Sunday order (0=Mon, 1=Tue, ..., 6=Sun)
+    // So we need to move Sunday (index 0) to the end
+    val reorderedData = mutableListOf<DayData>()
+    
+    // Add Monday through Saturday (indices 1-6 from original data)
+    for (i in 1..6) {
+        reorderedData.add(weeklyData[i])
+    }
+    // Add Sunday (index 0 from original data) to the end
+    reorderedData.add(weeklyData[0])
+    
+    // Update current day index for chart highlighting
+    // Convert from Calendar day to chart index (Monday=0, Tuesday=1, ..., Sunday=6)
+    val chartCurrentDayIndex = when (currentDayOfWeek) {
+        java.util.Calendar.MONDAY -> 0    // Monday = chart index 0
+        java.util.Calendar.TUESDAY -> 1   // Tuesday = chart index 1
+        java.util.Calendar.WEDNESDAY -> 2 // Wednesday = chart index 2
+        java.util.Calendar.THURSDAY -> 3  // Thursday = chart index 3
+        java.util.Calendar.FRIDAY -> 4    // Friday = chart index 4
+        java.util.Calendar.SATURDAY -> 5  // Saturday = chart index 5
+        java.util.Calendar.SUNDAY -> 6    // Sunday = chart index 6
+        else -> 0
+    }
+    
+    // Debug logging
+    val chartDayLabels = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+    android.util.Log.d("WeeklyData", "Current day: ${chartDayLabels[chartCurrentDayIndex]}, chart index: $chartCurrentDayIndex")
+    android.util.Log.d("WeeklyData", "Generated ${reorderedData.size} days of data (reordered for Mon-Sun chart)")
+    android.util.Log.d("WeeklyData", "Reordered weekly calories data: ${reorderedData.map { it.caloriesBurned }}")
+    
+    return reorderedData
 }
 
 // Function to generate yearly data (12 months)
@@ -1189,12 +1243,31 @@ private fun generateWeeklyStepsData(
         val dayDate = weekDates[dayIndex]
         
         // Sum all completed step targets for this day
-        val daySteps = stepTargetsByDate[dayDate]
+        val completedSteps = stepTargetsByDate[dayDate]
             ?.sumOf { it.actualSteps } ?: 0
+        
+        // Map Calendar day of week to our array index (0=Sunday, 1=Monday, etc.)
+        val currentDayIndex = when (currentDayOfWeek) {
+            java.util.Calendar.SUNDAY -> 0
+            java.util.Calendar.MONDAY -> 1
+            java.util.Calendar.TUESDAY -> 2
+            java.util.Calendar.WEDNESDAY -> 3
+            java.util.Calendar.THURSDAY -> 4
+            java.util.Calendar.FRIDAY -> 5
+            java.util.Calendar.SATURDAY -> 6
+            else -> 0
+        }
+        
+        // Add current user's daily steps if this is today
+        val finalSteps = if (dayIndex == currentDayIndex && userProfile != null) {
+            completedSteps + userProfile.dailySteps
+        } else {
+            completedSteps
+        }
         
         weeklyData.add(
             DayData(
-                steps = daySteps.toFloat(),
+                steps = finalSteps.toFloat(),
                 caloriesBurned = 0f, // Not used for step chart
                 caloriesConsumed = 0f, // Not used for step chart
                 workouts = 0 // Not used for step chart
@@ -1202,7 +1275,39 @@ private fun generateWeeklyStepsData(
         )
     }
     
-    return weeklyData
+    // Reorder data to match chart's Monday-Sunday order
+    // weeklyData is currently in Sunday-Saturday order (0=Sun, 1=Mon, ..., 6=Sat)
+    // Chart expects Monday-Sunday order (0=Mon, 1=Tue, ..., 6=Sun)
+    // So we need to move Sunday (index 0) to the end
+    val reorderedData = mutableListOf<DayData>()
+    
+    // Add Monday through Saturday (indices 1-6 from original data)
+    for (i in 1..6) {
+        reorderedData.add(weeklyData[i])
+    }
+    // Add Sunday (index 0 from original data) to the end
+    reorderedData.add(weeklyData[0])
+    
+    // Update current day index for chart highlighting
+    // Convert from Calendar day to chart index (Monday=0, Tuesday=1, ..., Sunday=6)
+    val chartCurrentDayIndex = when (currentDayOfWeek) {
+        java.util.Calendar.MONDAY -> 0    // Monday = chart index 0
+        java.util.Calendar.TUESDAY -> 1   // Tuesday = chart index 1
+        java.util.Calendar.WEDNESDAY -> 2 // Wednesday = chart index 2
+        java.util.Calendar.THURSDAY -> 3  // Thursday = chart index 3
+        java.util.Calendar.FRIDAY -> 4    // Friday = chart index 4
+        java.util.Calendar.SATURDAY -> 5  // Saturday = chart index 5
+        java.util.Calendar.SUNDAY -> 6    // Sunday = chart index 6
+        else -> 0
+    }
+    
+    // Debug logging
+    val chartDayLabels = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+    android.util.Log.d("WeeklyStepsData", "Current day: ${chartDayLabels[chartCurrentDayIndex]}, chart index: $chartCurrentDayIndex")
+    android.util.Log.d("WeeklyStepsData", "Generated ${reorderedData.size} days of step data (reordered for Mon-Sun chart)")
+    android.util.Log.d("WeeklyStepsData", "Reordered weekly steps data: ${reorderedData.map { it.steps }}")
+    
+    return reorderedData
 }
 
 private fun generateYearlyStepsData(

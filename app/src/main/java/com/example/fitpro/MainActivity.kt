@@ -222,6 +222,7 @@ fun FitProApp() {
         initializationComplete && userDao != null && workoutPlanDao != null && mealPlanDao != null && completedWorkoutDao != null && completedStepTargetDao != null && stepCounterManager != null -> {
             val userSession = remember { UserSession(context) }
             var sessionChecked by remember { mutableStateOf(false) }
+            var logoutCounter by remember { mutableStateOf(0) }
             
             // Reset sessionChecked when user logs out to ensure fresh auth flow
             LaunchedEffect(isLoggedIn) {
@@ -287,13 +288,18 @@ fun FitProApp() {
                             isLoggedIn = false
                             // Reset session check to trigger re-evaluation
                             sessionChecked = false
+                            // Increment logout counter to force navigation recreation
+                            logoutCounter++
+                            android.util.Log.d("MainActivity", "User logged out, forcing auth navigation")
                         }
                     )
                 } else {
                     // Always start fresh at login when not logged in
-                    key(isLoggedIn, sessionChecked) {
+                    // Use logout counter to force complete recreation of auth navigation
+                    key(isLoggedIn, sessionChecked, logoutCounter) {
+                        val authNavController = rememberNavController()
                         AuthNavigation(
-                            navController = navController,
+                            navController = authNavController,
                             userDao = userDao!!,
                             userSession = userSession,
                             onLoginSuccess = { isLoggedIn = true }
@@ -321,6 +327,13 @@ fun AuthNavigation(
     userSession: UserSession,
     onLoginSuccess: () -> Unit
 ) {
+    // Ensure we always start fresh at login when this composable is created
+    LaunchedEffect(Unit) {
+        navController.navigate(Screen.Login.route) {
+            popUpTo(0) { inclusive = true }
+        }
+    }
+    
     NavHost(
         navController = navController,
         startDestination = Screen.Login.route,

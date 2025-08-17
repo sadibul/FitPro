@@ -16,17 +16,13 @@ object TimeUtils {
     }
     
     /**
-     * Get current date string in Bangladesh timezone (yyyy-MM-dd format)
-     * Subtract 1 day to fix the off-by-one issue
+     * Get current date string in Bangladesh timezone in yyyy-MM-dd format
      */
     fun getBangladeshDateString(): String {
         val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
         dateFormat.timeZone = TimeZone.getTimeZone(BANGLADESH_TIMEZONE)
         
-        // Subtract 1 day (24 hours in milliseconds) to fix the off-by-one issue
-        val adjustedTimestamp = getBangladeshTimeMillis() - (24 * 60 * 60 * 1000)
-        
-        return dateFormat.format(Date(adjustedTimestamp))
+        return dateFormat.format(Date(getBangladeshTimeMillis()))
     }
     
     /**
@@ -40,16 +36,12 @@ object TimeUtils {
     
     /**
      * Convert UTC timestamp to Bangladesh local day (returns the day in Bangladesh timezone)
-     * Subtract 1 day to fix the off-by-one issue
      */
     fun convertToBangladeshDay(utcTimestamp: Long): String {
         val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
         dateFormat.timeZone = TimeZone.getTimeZone(BANGLADESH_TIMEZONE)
         
-        // Subtract 1 day (24 hours in milliseconds) to fix the off-by-one issue
-        val adjustedTimestamp = utcTimestamp - (24 * 60 * 60 * 1000)
-        
-        return dateFormat.format(Date(adjustedTimestamp))
+        return dateFormat.format(Date(utcTimestamp))
     }
     
     /**

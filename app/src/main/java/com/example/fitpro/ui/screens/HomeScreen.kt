@@ -136,12 +136,12 @@ fun HomeScreen(
                             // Mark target as completed
                             userDao.updateStepTargetCompleted(email, true)
                             
-                            // Save to completed step targets table - only save the target amount, not actual steps
+                            // Save to completed step targets table - save the actual daily steps achieved
                             val completedTarget = CompletedStepTarget(
                                 userEmail = email,
                                 targetSteps = profile.stepTarget,
-                                actualSteps = profile.stepTarget, // Save target amount, not actual steps
-                                completedAt = System.currentTimeMillis()
+                                actualSteps = profile.dailySteps, // Save actual daily steps achieved
+                                completedAt = TimeUtils.getBangladeshTimeMillis()
                             )
                             completedStepTargetDao.insertCompletedStepTarget(completedTarget)
                         }

@@ -25,7 +25,7 @@ data class MealPlan(
     val dinner: String,
     val totalCalories: Int,
     val isCompleted: Boolean = false, // Track completion status
-    val createdAt: String = java.time.LocalDateTime.now().toString()
+    val createdAt: String = com.example.fitpro.utils.TimeUtils.getBangladeshDateString()
 )
 
 @Entity(tableName = "completed_workouts")
