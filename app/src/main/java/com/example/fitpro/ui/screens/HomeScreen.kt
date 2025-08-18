@@ -530,19 +530,54 @@ private fun WorkoutActionModal(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
-            shape = RoundedCornerShape(16.dp)
+            shape = RoundedCornerShape(20.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
         ) {
             Column(
-                modifier = Modifier.padding(24.dp),
+                modifier = Modifier
+                    .padding(24.dp)
+                    .fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Workout Info
-                Icon(
-                    imageVector = getWorkoutIcon(workout.type),
-                    contentDescription = workout.type,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(48.dp)
-                )
+                // Close button at top right
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    IconButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Close,
+                            contentDescription = "Close",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                // Workout Info Header
+                Card(
+                    modifier = Modifier.size(80.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer
+                    )
+                ) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = getWorkoutIcon(workout.type),
+                            contentDescription = workout.type,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(40.dp)
+                        )
+                    }
+                }
                 
                 Spacer(modifier = Modifier.height(16.dp))
                 
@@ -550,21 +585,52 @@ private fun WorkoutActionModal(
                     text = workout.categoryName.ifEmpty { workout.type },
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.Center
+                    textAlign = TextAlign.Center,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 
-                Text(
-                    text = "${workout.duration} minutes",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Spacer(modifier = Modifier.height(8.dp))
                 
-                workout.targetCalories?.let { calories ->
-                    Text(
-                        text = "$calories calories target",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                // Workout Details Row
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    // Duration Info
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "${workout.duration}",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            text = "minutes",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    
+                    // Calories Info (if available)
+                    workout.targetCalories?.let { calories ->
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                text = "$calories",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.secondary
+                            )
+                            Text(
+                                text = "calories",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
                 }
                 
                 Spacer(modifier = Modifier.height(24.dp))
@@ -572,8 +638,8 @@ private fun WorkoutActionModal(
                 // Timer Display
                 if (isTimerActive) {
                     Card(
-                        modifier = Modifier.size(120.dp),
-                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.size(140.dp),
+                        shape = RoundedCornerShape(20.dp),
                         colors = CardDefaults.cardColors(
                             containerColor = when {
                                 currentRemainingTime <= 0 -> MaterialTheme.colorScheme.errorContainer
@@ -581,26 +647,42 @@ private fun WorkoutActionModal(
                                 WorkoutTimerManager.isTimerPaused(workout.id) -> MaterialTheme.colorScheme.tertiaryContainer
                                 else -> MaterialTheme.colorScheme.surfaceVariant
                             }
-                        )
+                        ),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
                     ) {
                         Box(
                             modifier = Modifier.fillMaxSize(),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text(
-                                text = if (currentRemainingTime <= 0) {
-                                    "TIME UP!"
-                                } else {
-                                    formatTime(currentRemainingTime)
-                                },
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold,
-                                textAlign = TextAlign.Center,
-                                color = when {
-                                    currentRemainingTime <= 0 -> MaterialTheme.colorScheme.error
-                                    else -> MaterialTheme.colorScheme.onSurface
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(
+                                    text = if (currentRemainingTime <= 0) {
+                                        "TIME UP!"
+                                    } else {
+                                        formatTime(currentRemainingTime)
+                                    },
+                                    style = MaterialTheme.typography.headlineMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    textAlign = TextAlign.Center,
+                                    color = when {
+                                        currentRemainingTime <= 0 -> MaterialTheme.colorScheme.error
+                                        else -> MaterialTheme.colorScheme.onSurface
+                                    }
+                                )
+                                if (currentRemainingTime > 0) {
+                                    Text(
+                                        text = when {
+                                            WorkoutTimerManager.isTimerRunning(workout.id) -> "Running"
+                                            WorkoutTimerManager.isTimerPaused(workout.id) -> "Paused"
+                                            else -> "Ready"
+                                        },
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
                                 }
-                            )
+                            }
                         }
                     }
                     
@@ -631,10 +713,13 @@ private fun WorkoutActionModal(
                                 }
                             }
                         },
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(50.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.primary
-                        )
+                        ),
+                        shape = RoundedCornerShape(12.dp)
                     ) {
                         Icon(
                             imageVector = when {
@@ -645,9 +730,9 @@ private fun WorkoutActionModal(
                                 else -> Icons.Default.PlayArrow
                             },
                             contentDescription = null,
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(18.dp)
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
                         Text(
                             when {
                                 !isTimerActive -> "Start Workout"
@@ -655,54 +740,64 @@ private fun WorkoutActionModal(
                                 WorkoutTimerManager.isTimerPaused(workout.id) -> "Resume"
                                 currentRemainingTime <= 0 -> "Start Again"
                                 else -> "Start Workout"
-                            }
+                            },
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
                     
                     // Completed Button
                     Button(
                         onClick = { showCompleteConfirmation = true },
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(50.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.secondary
-                        )
+                        ),
+                        shape = RoundedCornerShape(12.dp)
                     ) {
                         Icon(
                             Icons.Default.CheckCircle,
                             contentDescription = null,
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(18.dp)
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Mark as Completed")
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            "Completed",
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
                     }
                     
                     // Cancel Button
                     OutlinedButton(
                         onClick = { showCancelConfirmation = true },
-                        modifier = Modifier.fillMaxWidth(),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(50.dp),
+                        border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.error),
+                        shape = RoundedCornerShape(12.dp)
                     ) {
                         Icon(
                             Icons.Default.Cancel,
                             contentDescription = null,
-                            modifier = Modifier.size(20.dp),
+                            modifier = Modifier.size(18.dp),
                             tint = MaterialTheme.colorScheme.error
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
                         Text(
                             "Cancel Workout",
-                            color = MaterialTheme.colorScheme.error
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
-                    }
-                    
-                    Spacer(modifier = Modifier.height(8.dp))
-                    
-                    // Close Button
-                    TextButton(
-                        onClick = onDismiss,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("Close")
                     }
                 }
             }
@@ -1111,7 +1206,7 @@ private fun ActivityStatCardEnhanced(
     ) {
         Column(
             modifier = Modifier
-                .padding(12.dp)
+                .padding(8.dp)
                 .heightIn(min = 100.dp), // Match StepCounterCard height approximately
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
@@ -1119,19 +1214,23 @@ private fun ActivityStatCardEnhanced(
             Icon(
                 icon, 
                 contentDescription = label,
-                modifier = Modifier.size(24.dp)
+                modifier = Modifier.size(20.dp)
             )
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(3.dp))
             Text(
                 text = value,
-                style = MaterialTheme.typography.titleLarge,
+                style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center
+                textAlign = TextAlign.Center,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
             Text(
                 text = label,
-                style = MaterialTheme.typography.bodyMedium,
-                textAlign = TextAlign.Center
+                style = MaterialTheme.typography.labelSmall,
+                textAlign = TextAlign.Center,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
         }
     }

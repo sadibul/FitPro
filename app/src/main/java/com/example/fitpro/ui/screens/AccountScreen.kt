@@ -6,6 +6,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -129,35 +130,61 @@ fun AccountScreen(
                     Text(
                         "Account", 
                         style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Black
                     ) 
                 },
                 navigationIcon = {
-                    IconButton(onClick = { navController.navigateUp() }) {
-                        Icon(Icons.Default.ArrowBack, "Back")
+                    Surface(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .padding(4.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        color = Color.Black.copy(alpha = 0.05f)
+                    ) {
+                        IconButton(onClick = { navController.navigateUp() }) {
+                            Icon(
+                                Icons.Default.ArrowBack, 
+                                "Back",
+                                tint = Color.Black.copy(alpha = 0.7f)
+                            )
+                        }
                     }
                 },
                 actions = {
-                    IconButton(onClick = { /* Settings action */ }) {
-                        Icon(Icons.Default.Settings, "Settings")
+                    Surface(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .padding(4.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        color = Color.Black.copy(alpha = 0.05f)
+                    ) {
+                        IconButton(onClick = { /* Settings action */ }) {
+                            Icon(
+                                Icons.Default.Settings, 
+                                "Settings",
+                                tint = Color.Black.copy(alpha = 0.7f)
+                            )
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+                    containerColor = Color.White
                 )
             )
-        }
+        },
+        containerColor = Color(0xFFF8F9FA)
     ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
                 .verticalScroll(rememberScrollState())
-                .padding(16.dp),
+                .padding(horizontal = 16.dp, vertical = 12.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(20.dp)
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(4.dp))
             
             // Profile Picture Section
             ProfileImageSection(
@@ -165,25 +192,44 @@ fun AccountScreen(
                 onImageClick = { imagePickerLauncher.launch("image/*") }
             )
             
-            // User Email/Name
-            Text(
-                text = userProfile?.email ?: currentUserEmail,
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center
-            )
-            
-            Text(
-                text = userProfile?.email ?: currentUserEmail,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-                textAlign = TextAlign.Center
-            )
+            // User Info Card
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color.White
+                ),
+                elevation = CardDefaults.cardElevation(
+                    defaultElevation = 8.dp
+                )
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = userProfile?.email ?: currentUserEmail,
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center,
+                        color = Color.Black
+                    )
+                    
+                    Spacer(modifier = Modifier.height(8.dp))
+                    
+                    Text(
+                        text = userProfile?.email ?: currentUserEmail,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = Color.Black.copy(alpha = 0.6f),
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
             
             // Stats Cards Row
             StatsCardsRow(userProfile = userProfile)
-            
-            Spacer(modifier = Modifier.height(10.dp))
             
             // Premium Card
             PremiumCard()
@@ -196,8 +242,6 @@ fun AccountScreen(
             
             // Settings Button
             SettingsButton()
-            
-            Spacer(modifier = Modifier.height(10.dp))
             
             // Logout Button
             LogoutButton(onLogoutClick = {
@@ -295,25 +339,41 @@ private fun ProfileImageSection(
 
 @Composable 
 private fun StatsCardsRow(userProfile: UserProfile?) {
-    Row(
+    Card(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceEvenly
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = Color.White
+        ),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 8.dp
+        )
     ) {
-        StatCard(
-            icon = Icons.Default.MonitorWeight,
-            value = "${userProfile?.weight?.toInt() ?: 0} kg",
-            label = "Weight"
-        )
-        StatCard(
-            icon = Icons.Default.Height,
-            value = "${userProfile?.height ?: 0} ft",
-            label = "Height"
-        )
-        StatCard(
-            icon = Icons.Default.Cake,
-            value = "${userProfile?.age ?: 0} Years",
-            label = "Age"
-        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
+            StatCard(
+                icon = Icons.Default.MonitorWeight,
+                value = "${userProfile?.weight?.toInt() ?: 0} kg",
+                label = "Weight",
+                iconColor = Color(0xFF4A90E2)
+            )
+            StatCard(
+                icon = Icons.Default.Height,
+                value = "${userProfile?.height ?: 0} ft",
+                label = "Height",
+                iconColor = Color(0xFF4A90E2)
+            )
+            StatCard(
+                icon = Icons.Default.Cake,
+                value = "${userProfile?.age ?: 0}",
+                label = "Years",
+                iconColor = Color(0xFF4A90E2)
+            )
+        }
     }
 }
 
@@ -321,43 +381,45 @@ private fun StatsCardsRow(userProfile: UserProfile?) {
 private fun StatCard(
     icon: ImageVector,
     value: String,
-    label: String
+    label: String,
+    iconColor: Color
 ) {
-    Card(
-        modifier = Modifier
-            .width(100.dp)
-            .height(90.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = Color(0xFFF5F5F5)
-        ),
-        shape = RoundedCornerShape(12.dp)
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+        modifier = Modifier.padding(8.dp)
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(8.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+        Surface(
+            modifier = Modifier.size(40.dp),
+            shape = RoundedCornerShape(12.dp),
+            color = iconColor.copy(alpha = 0.15f)
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                modifier = Modifier.size(24.dp),
-                tint = Color(0xFF757575)
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = value,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = Color.Black
-            )
-            Text(
-                text = label,
-                style = MaterialTheme.typography.bodySmall,
-                color = Color(0xFF757575)
-            )
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp),
+                    tint = iconColor
+                )
+            }
         }
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = value,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = Color.Black,
+            textAlign = TextAlign.Center
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall,
+            color = Color.Black.copy(alpha = 0.6f),
+            textAlign = TextAlign.Center
+        )
     }
 }
 
@@ -366,53 +428,71 @@ private fun PremiumCard() {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .height(80.dp),
+            .clickable { /* Premium action */ },
         colors = CardDefaults.cardColors(
-            containerColor = Color(0xFFF5F5F5)
+            containerColor = Color.White
         ),
-        shape = RoundedCornerShape(12.dp)
+        shape = RoundedCornerShape(20.dp),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 8.dp
+        )
     ) {
         Row(
             modifier = Modifier
-                .fillMaxSize()
+                .fillMaxWidth()
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Pro badge
-            Box(
-                modifier = Modifier
-                    .background(Color(0xFF2196F3), RoundedCornerShape(6.dp))
-                    .padding(horizontal = 8.dp, vertical = 4.dp)
+            Surface(
+                modifier = Modifier.size(48.dp),
+                shape = RoundedCornerShape(16.dp),
+                color = Color(0xFF4A90E2)
             ) {
-                Text(
-                    text = "Pro",
-                    color = Color.White,
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Bold
-                )
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Pro",
+                        color = Color.White,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
             
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(16.dp))
             
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Go Premium & Unlock More!",
-                    style = MaterialTheme.typography.titleMedium,
+                    text = "Go Premium & Unlock",
+                    style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = Color.Black
                 )
                 Text(
-                    text = "Upgrade to Premium and enjoy exclusive features.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color(0xFF757575)
+                    text = "More!",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black
                 )
             }
             
-            Icon(
-                imageVector = Icons.Default.KeyboardArrowRight,
-                contentDescription = null,
-                tint = Color(0xFF757575)
-            )
+            Surface(
+                modifier = Modifier.size(36.dp),
+                shape = RoundedCornerShape(18.dp),
+                color = Color.Black.copy(alpha = 0.05f)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.KeyboardArrowRight,
+                    contentDescription = null,
+                    tint = Color.Black.copy(alpha = 0.6f),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(8.dp)
+                )
+            }
         }
     }
 }
@@ -422,41 +502,63 @@ private fun EditProfileButton(onEditClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .height(60.dp)
             .clickable { onEditClick() },
         colors = CardDefaults.cardColors(
-            containerColor = Color(0xFFF5F5F5)
+            containerColor = Color.White
         ),
-        shape = RoundedCornerShape(12.dp)
+        shape = RoundedCornerShape(20.dp),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 8.dp
+        )
     ) {
         Row(
             modifier = Modifier
-                .fillMaxSize()
+                .fillMaxWidth()
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = Icons.Default.Person,
-                contentDescription = null,
-                tint = Color(0xFF2196F3),
-                modifier = Modifier.size(24.dp)
-            )
+            Surface(
+                modifier = Modifier.size(40.dp),
+                shape = RoundedCornerShape(12.dp),
+                color = Color(0xFF4A90E2).copy(alpha = 0.15f)
+            ) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Person,
+                        contentDescription = null,
+                        tint = Color(0xFF4A90E2),
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
             
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(16.dp))
             
             Text(
                 text = "Edit Profile",
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Medium,
+                fontWeight = FontWeight.SemiBold,
                 color = Color.Black,
                 modifier = Modifier.weight(1f)
             )
             
-            Icon(
-                imageVector = Icons.Default.KeyboardArrowRight,
-                contentDescription = null,
-                tint = Color(0xFF757575)
-            )
+            Surface(
+                modifier = Modifier.size(36.dp),
+                shape = RoundedCornerShape(18.dp),
+                color = Color.Black.copy(alpha = 0.05f)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.KeyboardArrowRight,
+                    contentDescription = null,
+                    tint = Color.Black.copy(alpha = 0.6f),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(8.dp)
+                )
+            }
         }
     }
 }
@@ -466,33 +568,45 @@ private fun NotificationCard() {
     var notificationEnabled by remember { mutableStateOf(true) }
     
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(60.dp),
+        modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = Color(0xFFF5F5F5)
+            containerColor = Color.White
         ),
-        shape = RoundedCornerShape(12.dp)
+        shape = RoundedCornerShape(20.dp),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 8.dp
+        )
     ) {
         Row(
             modifier = Modifier
-                .fillMaxSize()
+                .fillMaxWidth()
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = Icons.Default.Notifications,
-                contentDescription = null,
-                tint = Color(0xFF2196F3),
-                modifier = Modifier.size(24.dp)
-            )
+            Surface(
+                modifier = Modifier.size(40.dp),
+                shape = RoundedCornerShape(12.dp),
+                color = Color(0xFF4A90E2).copy(alpha = 0.15f)
+            ) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Notifications,
+                        contentDescription = null,
+                        tint = Color(0xFF4A90E2),
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
             
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(16.dp))
             
             Text(
                 text = "Notification",
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Medium,
+                fontWeight = FontWeight.SemiBold,
                 color = Color.Black,
                 modifier = Modifier.weight(1f)
             )
@@ -502,7 +616,7 @@ private fun NotificationCard() {
                 onCheckedChange = { notificationEnabled = it },
                 colors = SwitchDefaults.colors(
                     checkedThumbColor = Color.White,
-                    checkedTrackColor = Color(0xFF2196F3),
+                    checkedTrackColor = Color(0xFF4A90E2),
                     uncheckedThumbColor = Color.White,
                     uncheckedTrackColor = Color(0xFFE0E0E0)
                 )
@@ -516,41 +630,63 @@ private fun SettingsButton() {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .height(60.dp)
             .clickable { /* Handle settings click */ },
         colors = CardDefaults.cardColors(
-            containerColor = Color(0xFFF5F5F5)
+            containerColor = Color.White
         ),
-        shape = RoundedCornerShape(12.dp)
+        shape = RoundedCornerShape(20.dp),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 8.dp
+        )
     ) {
         Row(
             modifier = Modifier
-                .fillMaxSize()
+                .fillMaxWidth()
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = Icons.Default.Settings,
-                contentDescription = null,
-                tint = Color(0xFF2196F3),
-                modifier = Modifier.size(24.dp)
-            )
+            Surface(
+                modifier = Modifier.size(40.dp),
+                shape = RoundedCornerShape(12.dp),
+                color = Color(0xFF4A90E2).copy(alpha = 0.15f)
+            ) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Settings,
+                        contentDescription = null,
+                        tint = Color(0xFF4A90E2),
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
             
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(16.dp))
             
             Text(
                 text = "Setting",
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Medium,
+                fontWeight = FontWeight.SemiBold,
                 color = Color.Black,
                 modifier = Modifier.weight(1f)
             )
             
-            Icon(
-                imageVector = Icons.Default.KeyboardArrowRight,
-                contentDescription = null,
-                tint = Color(0xFF757575)
-            )
+            Surface(
+                modifier = Modifier.size(36.dp),
+                shape = RoundedCornerShape(18.dp),
+                color = Color.Black.copy(alpha = 0.05f)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.KeyboardArrowRight,
+                    contentDescription = null,
+                    tint = Color.Black.copy(alpha = 0.6f),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(8.dp)
+                )
+            }
         }
     }
 }
@@ -559,48 +695,61 @@ private fun SettingsButton() {
 private fun LogoutButton(onLogoutClick: () -> Unit) {
     var isLoggingOut by remember { mutableStateOf(false) }
     
-    Button(
-        onClick = {
-            if (!isLoggingOut) {
-                isLoggingOut = true
-                onLogoutClick()
-            }
-        },
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .height(50.dp),
-        colors = ButtonDefaults.buttonColors(
-            containerColor = if (isLoggingOut) Color.Gray else Color(0xFF2196F3)
-        ),
-        shape = RoundedCornerShape(12.dp),
-        enabled = !isLoggingOut
+            .height(48.dp)
+            .clickable {
+                if (!isLoggingOut) {
+                    isLoggingOut = true
+                    onLogoutClick()
+                }
+            },
+        shape = RoundedCornerShape(24.dp),
+        color = if (isLoggingOut) Color.Gray else Color(0xFF4A90E2),
+        shadowElevation = 6.dp
     ) {
-        if (isLoggingOut) {
-            CircularProgressIndicator(
-                modifier = Modifier.size(20.dp),
-                color = Color.White,
-                strokeWidth = 2.dp
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = "Logging out...",
-                color = Color.White,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Medium
-            )
-        } else {
-            Icon(
-                imageVector = Icons.Default.ExitToApp,
-                contentDescription = null,
-                tint = Color.White
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = "Log Out",
-                color = Color.White,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Medium
-            )
+        Row(
+            modifier = Modifier.fillMaxSize(),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (isLoggingOut) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(18.dp),
+                    color = Color.White,
+                    strokeWidth = 2.dp
+                )
+                Spacer(modifier = Modifier.width(10.dp))
+                Text(
+                    text = "Logging out...",
+                    color = Color.White,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Bold
+                )
+            } else {
+                Surface(
+                    modifier = Modifier.size(20.dp),
+                    shape = RoundedCornerShape(10.dp),
+                    color = Color.White.copy(alpha = 0.2f)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ExitToApp,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(3.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(10.dp))
+                Text(
+                    text = "Log Out",
+                    color = Color.White,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Bold
+                )
+            }
         }
     }
 }
@@ -620,67 +769,157 @@ private fun EditProfileDialog(
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            shape = RoundedCornerShape(16.dp)
+                .padding(20.dp),
+            shape = RoundedCornerShape(32.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = Color.White
+            ),
+            elevation = CardDefaults.cardElevation(
+                defaultElevation = 16.dp
+            )
         ) {
             Column(
-                modifier = Modifier.padding(24.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                modifier = Modifier.padding(28.dp),
+                verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
-                Text(
-                    text = "Edit Profile",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold
-                )
+                // Header with close button
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Edit Profile",
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Black
+                    )
+                    Surface(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clickable { onDismiss() },
+                        shape = RoundedCornerShape(18.dp),
+                        color = Color.Black.copy(alpha = 0.05f)
+                    ) {
+                        Icon(
+                            Icons.Default.Close, 
+                            contentDescription = "Close",
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(10.dp),
+                            tint = Color.Black.copy(alpha = 0.6f)
+                        )
+                    }
+                }
                 
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("Name") },
-                    modifier = Modifier.fillMaxWidth()
+                    label = { Text("Name", color = Color.Black.copy(alpha = 0.7f)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = Color(0xFF4A90E2),
+                        unfocusedBorderColor = Color.Black.copy(alpha = 0.2f),
+                        focusedTextColor = Color.Black,
+                        unfocusedTextColor = Color.Black
+                    )
                 )
                 
                 OutlinedTextField(
                     value = age,
                     onValueChange = { if (it.all { char -> char.isDigit() }) age = it },
-                    label = { Text("Age") },
+                    label = { Text("Age", color = Color.Black.copy(alpha = 0.7f)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = Color(0xFF4A90E2),
+                        unfocusedBorderColor = Color.Black.copy(alpha = 0.2f),
+                        focusedTextColor = Color.Black,
+                        unfocusedTextColor = Color.Black
+                    )
                 )
                 
                 OutlinedTextField(
                     value = height,
                     onValueChange = { if (it.isEmpty() || it.toFloatOrNull() != null) height = it },
-                    label = { Text("Height (cm)") },
+                    label = { Text("Height (cm)", color = Color.Black.copy(alpha = 0.7f)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = Color(0xFF4A90E2),
+                        unfocusedBorderColor = Color.Black.copy(alpha = 0.2f),
+                        focusedTextColor = Color.Black,
+                        unfocusedTextColor = Color.Black
+                    )
                 )
                 
                 OutlinedTextField(
                     value = weight,
                     onValueChange = { if (it.isEmpty() || it.toFloatOrNull() != null) weight = it },
-                    label = { Text("Weight (kg)") },
+                    label = { Text("Weight (kg)", color = Color.Black.copy(alpha = 0.7f)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = Color(0xFF4A90E2),
+                        unfocusedBorderColor = Color.Black.copy(alpha = 0.2f),
+                        focusedTextColor = Color.Black,
+                        unfocusedTextColor = Color.Black
+                    )
                 )
+                
+                Spacer(modifier = Modifier.height(8.dp))
                 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    TextButton(onClick = onDismiss) {
-                        Text("Cancel")
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Button(
-                        onClick = {
-                            val ageInt = age.toIntOrNull() ?: 0
-                            val heightFloat = height.toFloatOrNull() ?: 0f
-                            val weightFloat = weight.toFloatOrNull() ?: 0f
-                            onSave(name, ageInt, heightFloat, weightFloat)
-                        }
+                    OutlinedButton(
+                        onClick = onDismiss,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(48.dp),
+                        shape = RoundedCornerShape(24.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = Color.Black.copy(alpha = 0.7f)
+                        ),
+                        border = BorderStroke(1.dp, Color.Black.copy(alpha = 0.2f))
                     ) {
-                        Text("Save")
+                        Text(
+                            "Cancel",
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                    
+                    Surface(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(48.dp)
+                            .clickable {
+                                val ageInt = age.toIntOrNull() ?: 0
+                                val heightFloat = height.toFloatOrNull() ?: 0f
+                                val weightFloat = weight.toFloatOrNull() ?: 0f
+                                onSave(name, ageInt, heightFloat, weightFloat)
+                            },
+                        shape = RoundedCornerShape(24.dp),
+                        color = Color(0xFF4A90E2),
+                        shadowElevation = 4.dp
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxSize(),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                "Save",
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold,
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                        }
                     }
                 }
             }

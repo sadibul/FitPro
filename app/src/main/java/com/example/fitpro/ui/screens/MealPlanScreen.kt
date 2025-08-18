@@ -3,6 +3,7 @@ package com.example.fitpro.ui.screens
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -10,6 +11,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -51,91 +53,124 @@ fun MealPlanScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Meal Plan") },
+                title = { 
+                    Text(
+                        "Meal Plan",
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Black
+                    ) 
+                },
                 navigationIcon = {
-                    IconButton(onClick = { 
-                        navController.navigate("home") {
-                            popUpTo("home") { inclusive = false }
-                            launchSingleTop = true
+                    Surface(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .padding(4.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        color = Color.Black.copy(alpha = 0.05f)
+                    ) {
+                        IconButton(onClick = { 
+                            navController.navigate("home") {
+                                popUpTo("home") { inclusive = false }
+                                launchSingleTop = true
+                            }
+                        }) {
+                            Icon(
+                                Icons.Default.ArrowBack, 
+                                contentDescription = "Back",
+                                tint = Color.Black.copy(alpha = 0.7f)
+                            )
                         }
-                    }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.White
+                )
             )
-        }
+        },
+        containerColor = Color(0xFFF8F9FA)
     ) { padding ->
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(horizontal = 20.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
             item {
                 Text(
-                    text = "Plan Your Meals",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold
+                    text = "Plan Your Daily Meals",
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black
                 )
             }
 
             item {
                 // Breakfast Card
-                MealSliderCard(
+                ModernMealSliderCard(
                     mealType = "Breakfast",
                     calories = breakfastCalories,
                     icon = Icons.Default.WbSunny,
+                    iconColor = Color(0xFF4A90E2),
                     onCaloriesChange = { breakfastCalories = it }
                 )
             }
 
             item {
                 // Lunch Card
-                MealSliderCard(
+                ModernMealSliderCard(
                     mealType = "Lunch",
                     calories = lunchCalories,
                     icon = Icons.Default.Restaurant,
+                    iconColor = Color(0xFF4A90E2),
                     onCaloriesChange = { lunchCalories = it }
                 )
             }
 
             item {
                 // Dinner Card
-                MealSliderCard(
+                ModernMealSliderCard(
                     mealType = "Dinner",
                     calories = dinnerCalories,
                     icon = Icons.Default.Restaurant,
+                    iconColor = Color(0xFF4A90E2),
                     onCaloriesChange = { dinnerCalories = it }
                 )
             }
 
             item {
-                // Total Daily Calories Card
+                // Total Daily Calories Summary Card
                 Card(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .shadow(8.dp, RoundedCornerShape(16.dp)),
-                    shape = RoundedCornerShape(16.dp),
+                        .fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer
+                        containerColor = Color(0xFFE8F4FD)
+                    ),
+                    elevation = CardDefaults.cardElevation(
+                        defaultElevation = 4.dp
                     )
                 ) {
                     Column(
-                        modifier = Modifier.padding(20.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(24.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
                             text = "Total Daily Calories",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Medium
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color.Black.copy(alpha = 0.8f),
+                            textAlign = TextAlign.Center
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             text = totalCalories.toString(),
                             style = MaterialTheme.typography.headlineLarge,
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
+                            color = Color(0xFF4A90E2),
+                            textAlign = TextAlign.Center
                         )
                     }
                 }
@@ -144,52 +179,60 @@ fun MealPlanScreen(
             item {
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Create Meal Plan Button
-                Button(
-                    onClick = {
-                        // Check if user has an incomplete meal plan
-                        val mealPlan = currentMealPlan
-                        if (mealPlan != null && !mealPlan.isCompleted) {
-                            // Show confirmation dialog for overwriting incomplete plan
-                            showOverwriteDialog = true
-                        } else {
-                            // No meal plan or completed meal plan - create directly
-                            coroutineScope.launch {
-                                withContext(Dispatchers.IO) {
-                                    val mealPlan = MealPlan(
-                                        userEmail = currentUser.email,
-                                        name = "Daily Meal Plan",
-                                        breakfast = """{"calories": ${breakfastCalories.toInt()}}""",
-                                        lunch = """{"calories": ${lunchCalories.toInt()}}""",
-                                        dinner = """{"calories": ${dinnerCalories.toInt()}}""",
-                                        totalCalories = totalCalories,
-                                        isCompleted = false,
-                                        createdAt = TimeUtils.getBangladeshDateString()
-                                    )
-                                    mealPlanDao.insertMealPlan(mealPlan)
-                                    
-                                    // Update user's calorie target
-                                    userDao.updateCalorieTarget(currentUser.email, totalCalories)
-                                }
-                                // Navigate back to home after creating meal plan
-                                navController.navigate("home") {
-                                    popUpTo("home") { inclusive = false }
-                                    launchSingleTop = true
-                                }
-                            }
-                        }
-                    },
+                // Modern Create Meal Plan Button
+                Surface(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp)
-                        .shadow(8.dp, RoundedCornerShape(28.dp)),
-                    shape = RoundedCornerShape(28.dp)
+                        .clickable {
+                            // Check if user has an incomplete meal plan
+                            val mealPlan = currentMealPlan
+                            if (mealPlan != null && !mealPlan.isCompleted) {
+                                // Show confirmation dialog for overwriting incomplete plan
+                                showOverwriteDialog = true
+                            } else {
+                                // No meal plan or completed meal plan - create directly
+                                coroutineScope.launch {
+                                    withContext(Dispatchers.IO) {
+                                        val mealPlan = MealPlan(
+                                            userEmail = currentUser.email,
+                                            name = "Daily Meal Plan",
+                                            breakfast = """{"calories": ${breakfastCalories.toInt()}}""",
+                                            lunch = """{"calories": ${lunchCalories.toInt()}}""",
+                                            dinner = """{"calories": ${dinnerCalories.toInt()}}""",
+                                            totalCalories = totalCalories,
+                                            isCompleted = false,
+                                            createdAt = TimeUtils.getBangladeshDateString()
+                                        )
+                                        mealPlanDao.insertMealPlan(mealPlan)
+                                        
+                                        // Update user's calorie target
+                                        userDao.updateCalorieTarget(currentUser.email, totalCalories)
+                                    }
+                                    // Navigate back to home after creating meal plan
+                                    navController.navigate("home") {
+                                        popUpTo("home") { inclusive = false }
+                                        launchSingleTop = true
+                                    }
+                                }
+                            }
+                        },
+                    shape = RoundedCornerShape(28.dp),
+                    color = Color(0xFF4A90E2),
+                    shadowElevation = 8.dp
                 ) {
-                    Text(
-                        text = "Create Meal Plan",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Medium
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxSize(),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            "Create Meal Plan",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    }
                 }
             }
         }
@@ -291,23 +334,26 @@ fun MealPlanScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun MealSliderCard(
+private fun ModernMealSliderCard(
     mealType: String,
     calories: Float,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
+    iconColor: Color,
     onCaloriesChange: (Float) -> Unit
 ) {
     Card(
         modifier = Modifier
-            .fillMaxWidth()
-            .shadow(4.dp, RoundedCornerShape(12.dp)),
-        shape = RoundedCornerShape(12.dp),
+            .fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
+            containerColor = Color.White
+        ),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 8.dp
         )
     ) {
         Column(
-            modifier = Modifier.padding(16.dp)
+            modifier = Modifier.padding(24.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -315,50 +361,89 @@ private fun MealSliderCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        icon, 
-                        contentDescription = mealType,
-                        tint = MaterialTheme.colorScheme.primary
-                    )
+                    Surface(
+                        modifier = Modifier.size(40.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        color = iconColor.copy(alpha = 0.15f)
+                    ) {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                icon, 
+                                contentDescription = mealType,
+                                tint = iconColor,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
                     Text(
                         text = mealType,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Medium
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color.Black
                     )
                 }
-                Text(
-                    text = "${calories.toInt()} cal",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold
-                )
+                
+                Surface(
+                    shape = RoundedCornerShape(16.dp),
+                    color = iconColor.copy(alpha = 0.1f)
+                ) {
+                    Text(
+                        text = "${calories.toInt()} cal",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = iconColor,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                    )
+                }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
             Text(
                 text = "Target Calories",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = Color.Black.copy(alpha = 0.7f)
             )
             
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(16.dp))
             
-            Slider(
-                value = calories,
-                onValueChange = onCaloriesChange,
-                valueRange = 100f..1000f,
-                steps = 18,
-                modifier = Modifier.fillMaxWidth(),
-                colors = SliderDefaults.colors(
-                    thumbColor = MaterialTheme.colorScheme.primary,
-                    activeTrackColor = MaterialTheme.colorScheme.primary,
-                    inactiveTrackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+            // Custom Modern Slider Track
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp)
+            ) {
+                // Background track
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(8.dp)
+                        .align(Alignment.Center),
+                    shape = RoundedCornerShape(4.dp),
+                    color = Color(0xFFE8F4FD)
+                ) {}
+                
+                // Slider
+                Slider(
+                    value = calories,
+                    onValueChange = onCaloriesChange,
+                    valueRange = 100f..1000f,
+                    steps = 18,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = SliderDefaults.colors(
+                        thumbColor = iconColor,
+                        activeTrackColor = iconColor,
+                        inactiveTrackColor = Color.Transparent
+                    )
                 )
-            )
+            }
         }
     }
 }

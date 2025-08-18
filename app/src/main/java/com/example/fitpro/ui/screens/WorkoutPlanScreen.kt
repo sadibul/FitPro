@@ -151,6 +151,7 @@ private fun getCategoryColor(categoryName: String): Color {
     return when (categoryName.lowercase()) {
         "cardio" -> Color(0xFFE74C3C)
         "strength" -> Color(0xFF3498DB)
+        "strength training" -> Color(0xFF3498DB)
         "flexibility" -> Color(0xFF2ECC71)
         "balance" -> Color(0xFF9B59B6)
         "endurance" -> Color(0xFFE67E22)
@@ -161,6 +162,15 @@ private fun getCategoryColor(categoryName: String): Color {
         "running" -> Color(0xFFE74C3C)
         "cycling" -> Color(0xFFF39C12)
         "walking" -> Color(0xFF27AE60)
+        "bodyweight circuit" -> Color(0xFFFF6B6B)
+        "hiking" -> Color(0xFF4ECDC4)
+        "boxing" -> Color(0xFFFF8E53)
+        "rowing" -> Color(0xFF4A90E2)
+        "crossfit" -> Color(0xFFD63384)
+        "stretching" -> Color(0xFF20C997)
+        "dance" -> Color(0xFFE83E8C)
+        "hiit" -> Color(0xFFDC3545)
+        "hit" -> Color(0xFFDC3545)
         else -> Color(0xFF95A5A6)
     }
 }
@@ -245,155 +255,265 @@ private fun WorkoutCustomizationModal(
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            shape = RoundedCornerShape(20.dp),
+                .padding(20.dp),
+            shape = RoundedCornerShape(32.dp),
             colors = CardDefaults.cardColors(
                 containerColor = Color.White
             ),
             elevation = CardDefaults.cardElevation(
-                defaultElevation = 8.dp
+                defaultElevation = 16.dp
             )
         ) {
             Column(
-                modifier = Modifier.padding(24.dp)
+                modifier = Modifier.padding(28.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Header with close button
+                // Header with category icon and close button
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.Top
                 ) {
-                    Text(
-                        text = category.name,
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
+                    // Empty space for balance
+                    Spacer(modifier = Modifier.size(36.dp))
+                    
+                    // Category Icon - Centered
+                    Surface(
+                        modifier = Modifier.size(56.dp),
+                        shape = RoundedCornerShape(18.dp),
+                        color = getCategoryColor(category.name).copy(alpha = 0.15f)
+                    ) {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = when (category.name.lowercase()) {
+                                    "strength", "strength training" -> Icons.Default.FitnessCenter
+                                    "cardio", "running" -> Icons.Default.DirectionsRun
+                                    "cycling" -> Icons.Default.DirectionsBike
+                                    "walking", "hiking" -> Icons.Default.DirectionsWalk
+                                    else -> Icons.Default.SportsGymnastics
+                                },
+                                contentDescription = null,
+                                modifier = Modifier.size(28.dp),
+                                tint = getCategoryColor(category.name)
+                            )
+                        }
+                    }
+                    
+                    // Close Button
                     Surface(
                         modifier = Modifier
-                            .size(32.dp)
+                            .size(36.dp)
                             .clickable { onDismiss() },
-                        shape = RoundedCornerShape(16.dp),
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
+                        shape = RoundedCornerShape(18.dp),
+                        color = Color.Black.copy(alpha = 0.05f)
                     ) {
                         Icon(
                             Icons.Default.Close, 
                             contentDescription = "Close",
                             modifier = Modifier
                                 .fillMaxSize()
-                                .padding(8.dp),
-                            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                                .padding(10.dp),
+                            tint = Color.Black.copy(alpha = 0.6f)
                         )
                     }
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // Duration Section
+                // Category Title
                 Text(
-                    text = "Duration",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface
+                    text = category.name,
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black,
+                    textAlign = TextAlign.Center
                 )
-                Spacer(modifier = Modifier.height(12.dp))
-                
-                // Custom slider track
-                Box(
+
+                Spacer(modifier = Modifier.height(32.dp))
+
+                // Duration Section
+                Column(
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Slider(
-                        value = duration,
-                        onValueChange = { duration = it },
-                        valueRange = category.minDuration.toFloat()..category.maxDuration.toFloat(),
-                        steps = ((category.maxDuration - category.minDuration) / 5).coerceAtLeast(1),
-                        colors = SliderDefaults.colors(
-                            thumbColor = Color(0xFF4A90E2),
-                            activeTrackColor = Color(0xFF4A90E2),
-                            inactiveTrackColor = Color(0xFF4A90E2).copy(alpha = 0.3f)
-                        )
-                    )
-                }
-                
-                Text(
-                    text = "${duration.roundToInt()} minutes",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = Color(0xFF4A90E2),
-                    fontWeight = FontWeight.Bold
-                )
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-                // Calories Section (only if category has calories)
-                if (category.hasCalories) {
                     Text(
-                        text = "Target Calories",
-                        style = MaterialTheme.typography.titleMedium,
+                        text = "Duration",
+                        style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = Color.Black,
+                        modifier = Modifier.padding(bottom = 16.dp)
                     )
-                    Spacer(modifier = Modifier.height(12.dp))
                     
+                    // Custom Modern Slider Track
                     Box(
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 8.dp)
                     ) {
+                        // Background track
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(8.dp)
+                                .align(Alignment.Center),
+                            shape = RoundedCornerShape(4.dp),
+                            color = Color(0xFFE8F4FD)
+                        ) {}
+                        
+                        // Slider
                         Slider(
-                            value = calories,
-                            onValueChange = { calories = it },
-                            valueRange = (category.minCalories ?: 0).toFloat()..(category.maxCalories ?: 500).toFloat(),
-                            steps = ((category.maxCalories ?: 500) - (category.minCalories ?: 0)) / 25,
+                            value = duration,
+                            onValueChange = { duration = it },
+                            valueRange = category.minDuration.toFloat()..category.maxDuration.toFloat(),
+                            steps = ((category.maxDuration - category.minDuration) / 5).coerceAtLeast(1),
                             colors = SliderDefaults.colors(
                                 thumbColor = Color(0xFF4A90E2),
                                 activeTrackColor = Color(0xFF4A90E2),
-                                inactiveTrackColor = Color(0xFF4A90E2).copy(alpha = 0.3f)
-                            )
+                                inactiveTrackColor = Color.Transparent
+                            ),
+                            modifier = Modifier.fillMaxWidth()
                         )
                     }
                     
-                    Text(
-                        text = "${calories.roundToInt()} calories",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = Color(0xFF4A90E2),
-                        fontWeight = FontWeight.Bold
-                    )
+                    // Duration Value Display
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 12.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Surface(
+                            shape = RoundedCornerShape(20.dp),
+                            color = Color(0xFF4A90E2).copy(alpha = 0.1f)
+                        ) {
+                            Text(
+                                text = "${duration.roundToInt()} minutes",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = Color(0xFF4A90E2),
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(28.dp))
+
+                // Calories Section (only if category has calories)
+                if (category.hasCalories) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = "Target Calories",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color.Black,
+                            modifier = Modifier.padding(bottom = 16.dp)
+                        )
+                        
+                        // Custom Modern Slider Track for Calories
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 8.dp)
+                        ) {
+                            // Background track
+                            Surface(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(8.dp)
+                                    .align(Alignment.Center),
+                                shape = RoundedCornerShape(4.dp),
+                                color = Color(0xFFE8F4FD)
+                            ) {}
+                            
+                            // Slider
+                            Slider(
+                                value = calories,
+                                onValueChange = { calories = it },
+                                valueRange = (category.minCalories ?: 0).toFloat()..(category.maxCalories ?: 500).toFloat(),
+                                steps = ((category.maxCalories ?: 500) - (category.minCalories ?: 0)) / 25,
+                                colors = SliderDefaults.colors(
+                                    thumbColor = Color(0xFF4A90E2),
+                                    activeTrackColor = Color(0xFF4A90E2),
+                                    inactiveTrackColor = Color.Transparent
+                                ),
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                        
+                        // Calories Value Display
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 12.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Surface(
+                                shape = RoundedCornerShape(20.dp),
+                                color = Color(0xFF4A90E2).copy(alpha = 0.1f)
+                            ) {
+                                Text(
+                                    text = "${calories.roundToInt()} calories",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = Color(0xFF4A90E2),
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                                )
+                            }
+                        }
+                    }
                     
-                    Spacer(modifier = Modifier.height(28.dp))
+                    Spacer(modifier = Modifier.height(36.dp))
                 } else {
                     Spacer(modifier = Modifier.height(8.dp))
                 }
 
-                // Modern Add Button
-                Button(
-                    onClick = {
-                        onAdd(
-                            duration.roundToInt(),
-                            if (category.hasCalories) calories.roundToInt() else null
-                        )
-                    },
+                // Modern Add Button with Gradient Effect
+                Surface(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(52.dp),
-                    shape = RoundedCornerShape(26.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF4A90E2)
-                    ),
-                    elevation = ButtonDefaults.buttonElevation(
-                        defaultElevation = 4.dp
-                    )
+                        .height(56.dp)
+                        .clickable {
+                            onAdd(
+                                duration.roundToInt(),
+                                if (category.hasCalories) calories.roundToInt() else null
+                            )
+                        },
+                    shape = RoundedCornerShape(28.dp),
+                    color = Color(0xFF4A90E2),
+                    shadowElevation = 8.dp
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Add,
-                        contentDescription = null,
-                        modifier = Modifier.size(20.dp),
-                        tint = Color.White
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        "Add to Plan", 
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 16.sp,
-                        color = Color.White
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxSize(),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Surface(
+                            modifier = Modifier.size(24.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            color = Color.White.copy(alpha = 0.2f)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(4.dp),
+                                tint = Color.White
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            "Add to Plan", 
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 18.sp,
+                            color = Color.White
+                        )
+                    }
                 }
             }
         }

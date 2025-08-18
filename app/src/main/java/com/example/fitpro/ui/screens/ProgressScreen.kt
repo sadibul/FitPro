@@ -70,7 +70,12 @@ fun ProgressScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Progress") }
+                title = { 
+                    Text(
+                        "Progress",
+                        fontWeight = FontWeight.Bold
+                    ) 
+                }
             )
         }
     ) { padding ->

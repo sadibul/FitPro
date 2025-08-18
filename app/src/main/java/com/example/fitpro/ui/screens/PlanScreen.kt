@@ -61,7 +61,7 @@ fun PlanScreen(
             // Workout Plan Card
             ModernPlanCard(
                 title = "Workout Plan",
-                description = "Create and manage your workout routine",
+                description = "Create your workout routine",
                 icon = Icons.Default.FitnessCenter,
                 backgroundColor = Color(0xFFE3F2FD), // Light blue
                 iconColor = Color(0xFF2196F3)       // Blue
@@ -72,7 +72,7 @@ fun PlanScreen(
             // Meal Plan Card
             ModernPlanCard(
                 title = "Meal Plan",
-                description = "Plan your daily meals and track nutrition",
+                description = "Plan your daily meals",
                 icon = Icons.Default.Restaurant,
                 backgroundColor = Color(0xFFE8F5E8), // Light green
                 iconColor = Color(0xFF4CAF50)       // Green
