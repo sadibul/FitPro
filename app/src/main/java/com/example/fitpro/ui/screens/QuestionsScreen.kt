@@ -1,13 +1,18 @@
 package com.example.fitpro.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.fitpro.Screen
 import com.example.fitpro.data.UserDao
@@ -37,42 +42,79 @@ fun QuestionsScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+            .background(Color.White)
+            .padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        // Title
         Text(
             text = "Tell us about yourself",
-            style = MaterialTheme.typography.headlineMedium,
-            modifier = Modifier.padding(vertical = 32.dp)
+            fontSize = 28.sp,
+            fontWeight = FontWeight.Bold,
+            color = Color(0xFF374151),
+            modifier = Modifier.padding(top = 32.dp, bottom = 48.dp),
+            textAlign = TextAlign.Center
         )
 
-        // Gender Selection
+        // Gender Selection Card
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .shadow(4.dp, RoundedCornerShape(8.dp)),
-            shape = RoundedCornerShape(8.dp)
+                .padding(bottom = 24.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = Color(0xFFF3F4F6)
+            ),
+            elevation = CardDefaults.cardElevation(0.dp)
         ) {
-            Column(modifier = Modifier.padding(16.dp)) {
+            Column(
+                modifier = Modifier.padding(24.dp)
+            ) {
                 Text(
                     text = "Gender",
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(bottom = 8.dp)
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = Color(0xFF374151),
+                    modifier = Modifier.padding(bottom = 16.dp)
                 )
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    horizontalArrangement = Arrangement.spacedBy(32.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    RadioButton(
-                        selected = gender == "Male",
-                        onClick = { gender = "Male" }
-                    )
-                    Text("Male")
-                    RadioButton(
-                        selected = gender == "Female",
-                        onClick = { gender = "Female" }
-                    )
-                    Text("Female")
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        RadioButton(
+                            selected = gender == "Male",
+                            onClick = { gender = "Male" },
+                            colors = RadioButtonDefaults.colors(
+                                selectedColor = Color(0xFF6366F1)
+                            )
+                        )
+                        Text(
+                            "Male",
+                            fontSize = 16.sp,
+                            color = Color(0xFF374151)
+                        )
+                    }
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        RadioButton(
+                            selected = gender == "Female",
+                            onClick = { gender = "Female" },
+                            colors = RadioButtonDefaults.colors(
+                                selectedColor = Color(0xFF6366F1)
+                            )
+                        )
+                        Text(
+                            "Female",
+                            fontSize = 16.sp,
+                            color = Color(0xFF374151)
+                        )
+                    }
                 }
             }
         }
@@ -81,11 +123,18 @@ fun QuestionsScreen(
         OutlinedTextField(
             value = age,
             onValueChange = { if (it.length <= 3) age = it.filter { char -> char.isDigit() } },
-            label = { Text("Age") },
+            placeholder = { Text("Age", color = Color(0xFF9CA3AF)) },
             modifier = Modifier
                 .fillMaxWidth()
-                .shadow(4.dp, RoundedCornerShape(8.dp)),
-            shape = RoundedCornerShape(8.dp),
+                .padding(bottom = 16.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                unfocusedBorderColor = Color(0xFFE5E7EB),
+                focusedBorderColor = Color(0xFF6366F1),
+                unfocusedContainerColor = Color(0xFFF9FAFB),
+                focusedContainerColor = Color(0xFFF9FAFB)
+            ),
+            singleLine = true,
             keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
                 keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
             )
@@ -95,11 +144,18 @@ fun QuestionsScreen(
         OutlinedTextField(
             value = weight,
             onValueChange = { weight = it.filter { char -> char.isDigit() || char == '.' } },
-            label = { Text("Weight (kg)") },
+            placeholder = { Text("Weight (kg)", color = Color(0xFF9CA3AF)) },
             modifier = Modifier
                 .fillMaxWidth()
-                .shadow(4.dp, RoundedCornerShape(8.dp)),
-            shape = RoundedCornerShape(8.dp),
+                .padding(bottom = 16.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                unfocusedBorderColor = Color(0xFFE5E7EB),
+                focusedBorderColor = Color(0xFF6366F1),
+                unfocusedContainerColor = Color(0xFFF9FAFB),
+                focusedContainerColor = Color(0xFFF9FAFB)
+            ),
+            singleLine = true,
             keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
                 keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal
             )
@@ -109,11 +165,18 @@ fun QuestionsScreen(
         OutlinedTextField(
             value = height,
             onValueChange = { height = it.filter { char -> char.isDigit() } },
-            label = { Text("Height (cm)") },
+            placeholder = { Text("Height (cm)", color = Color(0xFF9CA3AF)) },
             modifier = Modifier
                 .fillMaxWidth()
-                .shadow(4.dp, RoundedCornerShape(8.dp)),
-            shape = RoundedCornerShape(8.dp),
+                .padding(bottom = 32.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                unfocusedBorderColor = Color(0xFFE5E7EB),
+                focusedBorderColor = Color(0xFF6366F1),
+                unfocusedContainerColor = Color(0xFFF9FAFB),
+                focusedContainerColor = Color(0xFFF9FAFB)
+            ),
+            singleLine = true,
             keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
                 keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
             )
@@ -121,6 +184,7 @@ fun QuestionsScreen(
 
         Spacer(modifier = Modifier.weight(1f))
 
+        // Continue Button with Gradient
         Button(
             onClick = {
                 coroutineScope.launch {
@@ -155,13 +219,31 @@ fun QuestionsScreen(
             },
             modifier = Modifier
                 .fillMaxWidth()
-                .height(50.dp)
-                .shadow(8.dp, RoundedCornerShape(25.dp)),
-            shape = RoundedCornerShape(25.dp),
+                .height(56.dp)
+                .background(
+                    brush = Brush.horizontalGradient(
+                        colors = listOf(
+                            Color(0xFF6366F1),
+                            Color(0xFF8B5CF6)
+                        )
+                    ),
+                    shape = RoundedCornerShape(16.dp)
+                ),
+            shape = RoundedCornerShape(16.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color.Transparent
+            ),
             enabled = gender.isNotEmpty() && age.isNotEmpty() && 
                      weight.isNotEmpty() && height.isNotEmpty()
         ) {
-            Text("Continue")
+            Text(
+                text = "Continue",
+                color = Color.White,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold
+            )
         }
+        
+        Spacer(modifier = Modifier.height(32.dp))
     }
 }

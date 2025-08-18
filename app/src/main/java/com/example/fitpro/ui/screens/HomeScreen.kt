@@ -26,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -158,18 +159,18 @@ fun HomeScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(scrollState)
-                .padding(16.dp)
+                .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
         // Welcome Section
-        WelcomeSection(
+        ModernWelcomeSection(
             name = userProfile?.name ?: "User",
             profileImageUri = userProfile?.profileImageUri
         )
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
         // Current Plan Section with Workout Cards
-        CurrentPlanSection(
+        ModernCurrentPlanSection(
             userEmail = currentUserEmail,
             workoutPlanDao = workoutPlanDao,
             completedWorkoutDao = completedWorkoutDao,
@@ -177,10 +178,10 @@ fun HomeScreen(
             onNavigateToPlan = { navController.navigate(Screen.Plan.route) }
         )
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
-        // Activity Stats Section
-        ActivityStatsSection(
+        // Activity Stats Section with colorful cards
+        ModernActivityStatsSection(
             steps = dailySteps,
             stepTarget = userProfile?.stepTarget ?: 0,
             calories = userProfile?.caloriesBurned ?: 0,
@@ -196,24 +197,19 @@ fun HomeScreen(
             stepCounterManager = stepCounterManager
         )
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
-        // BMI Section
-        BMICard(
+        // BMI Section with modern styling
+        ModernBMICard(
             bmi = userProfile?.calculateBMI() ?: 0f,
             category = userProfile?.getBMICategory() ?: "Unknown",
             onClick = onBMICardClick
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
-        // Health Tips Section
-        HealthTipsCard()
-        
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Medical Assistance Card
-        MedicalAssistanceCard(
+        // Health Assistance Card (replaces both health tips and medical assistance)
+        ModernHealthAssistanceCard(
             modifier = Modifier.fillMaxWidth()
         )
         
@@ -1760,6 +1756,624 @@ private fun CalorieTargetDialog(
                         Text("Set Target")
                     }
                 }
+            }
+        }
+    }
+}
+
+// Modern composables for the new design
+
+@Composable
+private fun ModernWelcomeSection(
+    name: String,
+    profileImageUri: String? = null
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column {
+            Text(
+                text = "Welcome back,",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+            )
+            Text(
+                text = name,
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
+        // Profile Picture
+        Surface(
+            modifier = Modifier
+                .size(45.dp)
+                .clip(RoundedCornerShape(22.5.dp)),
+            color = MaterialTheme.colorScheme.primary
+        ) {
+            if (profileImageUri != null) {
+                AsyncImage(
+                    model = profileImageUri,
+                    contentDescription = "Profile Picture",
+                    modifier = Modifier
+                        .size(45.dp)
+                        .clip(RoundedCornerShape(22.5.dp)),
+                    contentScale = ContentScale.Crop,
+                    error = painterResource(R.drawable.ic_launcher_foreground),
+                    onError = { 
+                        android.util.Log.e("HomeScreen", "Failed to load profile image: $profileImageUri")
+                    }
+                )
+            } else {
+                Icon(
+                    Icons.Default.Person,
+                    contentDescription = "Profile",
+                    modifier = Modifier.padding(8.dp),
+                    tint = MaterialTheme.colorScheme.onPrimary
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ModernCurrentPlanSection(
+    userEmail: String?,
+    workoutPlanDao: WorkoutPlanDao,
+    completedWorkoutDao: CompletedWorkoutDao,
+    userDao: UserDao,
+    onNavigateToPlan: () -> Unit
+) {
+    val scope = rememberCoroutineScope()
+    
+    val workoutPlans by remember(userEmail) {
+        if (userEmail != null) {
+            workoutPlanDao.getAllWorkoutPlans(userEmail)
+        } else {
+            flowOf(emptyList())
+        }
+    }.collectAsStateWithLifecycle(initialValue = emptyList())
+
+    Column {
+        Text(
+            text = "Current Plan",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.padding(horizontal = 4.dp)
+        )
+        
+        Spacer(modifier = Modifier.height(12.dp))
+        
+        if (workoutPlans.isNotEmpty()) {
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                contentPadding = PaddingValues(horizontal = 4.dp)
+            ) {
+                items(
+                    items = workoutPlans,
+                    key = { it.id }
+                ) { workout ->
+                    WorkoutCard(
+                        workout = workout,
+                        workoutPlanDao = workoutPlanDao,
+                        completedWorkoutDao = completedWorkoutDao,
+                        userDao = userDao,
+                        userEmail = userEmail ?: "",
+                        onDelete = {
+                            scope.launch(Dispatchers.IO) {
+                                try {
+                                    workoutPlanDao.deleteWorkoutPlan(workout)
+                                } catch (e: Exception) {
+                                    e.printStackTrace()
+                                }
+                            }
+                        }
+                    )
+                }
+            }
+        } else {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(140.dp)
+                    .clickable { onNavigateToPlan() },
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color(0xFFE8F4FD)
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        Icons.Default.Add,
+                        contentDescription = "Add Plan",
+                        modifier = Modifier.size(40.dp),
+                        tint = Color(0xFF4A90E2)
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Add Your First Workout Plan",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Medium,
+                        color = Color(0xFF4A90E2),
+                        textAlign = TextAlign.Center
+                    )
+                    Text(
+                        text = "Tap to get started",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFF4A90E2).copy(alpha = 0.7f),
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ModernActivityStatsSection(
+    steps: Int, 
+    stepTarget: Int, 
+    calories: Int, 
+    heartRate: Int,
+    userDao: UserDao,
+    completedStepTargetDao: CompletedStepTargetDao,
+    currentUserEmail: String?,
+    calorieTarget: Int = 0,
+    currentMealPlan: MealPlan? = null,
+    navController: NavController,
+    mealPlanDao: MealPlanDao,
+    userProfile: UserProfile?,
+    stepCounterManager: StepCounterManager
+) {
+    var showStepTargetDialog by remember { mutableStateOf(false) }
+    var showCaloriesResetDialog by remember { mutableStateOf(false) }
+    var showMealPlanCompletionDialog by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        // Steps Card with light blue background
+        ModernStepCounterCard(
+            steps = steps,
+            stepTarget = stepTarget,
+            userProfile = userProfile,
+            onClick = { showStepTargetDialog = true },
+            modifier = Modifier.weight(1f)
+        )
+        
+        // Calories Burn Card with light orange background
+        ModernActivityStatCard(
+            icon = Icons.Default.LocalFireDepartment,
+            value = "$calories",
+            label = "Calories\nBurn",
+            backgroundColor = Color(0xFFFFE5CC),
+            iconColor = Color(0xFFFF6B35),
+            modifier = Modifier.weight(1f),
+            onClick = { showCaloriesResetDialog = true }
+        )
+        
+        // Calories Plan Card with light green background
+        ModernActivityStatCard(
+            icon = Icons.Default.Restaurant,
+            value = if (currentMealPlan != null) {
+                if (currentMealPlan.isCompleted) "Done" else "${currentMealPlan.totalCalories}"
+            } else {
+                if (calorieTarget > 0) "$calorieTarget" else "0"
+            },
+            label = "Calories\nPlan",
+            backgroundColor = Color(0xFFE8F5E8),
+            iconColor = Color(0xFF4CAF50),
+            modifier = Modifier.weight(1f),
+            onClick = { 
+                if (currentMealPlan != null && !currentMealPlan.isCompleted) {
+                    showMealPlanCompletionDialog = true
+                } else {
+                    navController.navigate(Screen.MealPlan.route)
+                }
+            }
+        )
+    }
+    
+    // Dialogs (keeping the existing ones)
+    if (showStepTargetDialog) {
+        StepTargetDialog(
+            currentTarget = stepTarget,
+            userProfile = userProfile,
+            userDao = userDao,
+            completedStepTargetDao = completedStepTargetDao,
+            currentUserEmail = currentUserEmail,
+            stepCounterManager = stepCounterManager,
+            onDismiss = { showStepTargetDialog = false }
+        )
+    }
+    
+    if (showCaloriesResetDialog) {
+        AlertDialog(
+            onDismissRequest = { showCaloriesResetDialog = false },
+            icon = {
+                Icon(
+                    Icons.Default.LocalFireDepartment,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(24.dp)
+                )
+            },
+            title = {
+                Text("Reset Calories Burned?")
+            },
+            text = {
+                Text("This will reset your calories burned counter to 0. This action cannot be undone.")
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        currentUserEmail?.let { email ->
+                            scope.launch(Dispatchers.IO) {
+                                try {
+                                    userDao.resetCaloriesBurned(email)
+                                } catch (e: Exception) {
+                                    e.printStackTrace()
+                                }
+                            }
+                        }
+                        showCaloriesResetDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Text("Reset")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCaloriesResetDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+    
+    if (showMealPlanCompletionDialog && currentMealPlan != null) {
+        Dialog(onDismissRequest = { showMealPlanCompletionDialog = false }) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Icon(
+                        Icons.Default.CheckCircle,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(48.dp)
+                    )
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    Text(
+                        text = "Meal Plan Ready!",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                    
+                    Spacer(modifier = Modifier.height(8.dp))
+                    
+                    Text(
+                        text = "Do you want to mark it as Complete?",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    
+                    Spacer(modifier = Modifier.height(24.dp))
+                    
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = {
+                                showMealPlanCompletionDialog = false
+                            },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("Later")
+                        }
+                        
+                        Button(
+                            onClick = {
+                                scope.launch(Dispatchers.IO) {
+                                    try {
+                                        mealPlanDao.updateMealPlanCompletion(currentMealPlan.id, true)
+                                    } catch (e: Exception) {
+                                        e.printStackTrace()
+                                    }
+                                }
+                                showMealPlanCompletionDialog = false
+                            },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("Done")
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ModernStepCounterCard(
+    steps: Int,
+    stepTarget: Int,
+    userProfile: UserProfile?,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val isTargetCompleted = userProfile?.isStepTargetCompleted == true
+    val hasTarget = stepTarget > 0
+    
+    val displaySteps = if (isTargetCompleted && steps >= stepTarget) {
+        stepTarget
+    } else {
+        minOf(steps, stepTarget)
+    }
+    
+    val progress = if (stepTarget > 0) (displaySteps.toFloat() / stepTarget.toFloat()).coerceIn(0f, 1f) else 0f
+    
+    Card(
+        modifier = modifier
+            .clickable { onClick() }
+            .height(110.dp),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = Color(0xFFE3F2FD)
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                Icons.Default.DirectionsWalk, 
+                contentDescription = "Steps",
+                tint = Color(0xFF2196F3),
+                modifier = Modifier.size(20.dp)
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            
+            if (isTargetCompleted && steps >= stepTarget) {
+                Text(
+                    text = "Done",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF2196F3)
+                )
+            } else {
+                Text(
+                    text = "$steps",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF2196F3)
+                )
+            }
+            
+            Text(
+                text = "Steps",
+                style = MaterialTheme.typography.bodySmall,
+                color = Color(0xFF2196F3).copy(alpha = 0.7f),
+                textAlign = TextAlign.Center
+            )
+            
+            if (hasTarget) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = if (isTargetCompleted && steps >= stepTarget) {
+                        "Set your\ntarget"
+                    } else {
+                        "Set your\ntarget"
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color(0xFF2196F3),
+                    textAlign = TextAlign.Center,
+                    fontWeight = FontWeight.Medium
+                )
+            } else {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Set your\ntarget",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color(0xFF2196F3),
+                    textAlign = TextAlign.Center,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ModernActivityStatCard(
+    icon: ImageVector,
+    value: String,
+    label: String,
+    backgroundColor: Color,
+    iconColor: Color,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit = {}
+) {
+    Card(
+        modifier = modifier
+            .clickable { onClick() }
+            .height(110.dp),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = backgroundColor
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                icon, 
+                contentDescription = label,
+                modifier = Modifier.size(20.dp),
+                tint = iconColor
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = value,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = iconColor
+            )
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodySmall,
+                color = iconColor.copy(alpha = 0.7f),
+                textAlign = TextAlign.Center
+            )
+        }
+    }
+}
+
+@Composable
+private fun ModernBMICard(bmi: Float, category: String, onClick: () -> Unit) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column {
+                Text(
+                    text = "BMI",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Row(
+                    verticalAlignment = Alignment.Bottom
+                ) {
+                    Text(
+                        text = String.format("%.1f", bmi),
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = category,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                    )
+                }
+            }
+            Icon(
+                Icons.Default.KeyboardArrowRight,
+                contentDescription = "View BMI Details",
+                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+            )
+        }
+    }
+}
+
+@Composable
+private fun ModernHealthAssistanceCard(modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    
+    Card(
+        modifier = modifier
+            .clickable {
+                val intent = Intent(Intent.ACTION_VIEW).apply {
+                    data = Uri.parse("geo:23.8103,90.4125?q=hospital+dhaka+bangladesh")
+                    setPackage("com.google.android.apps.maps")
+                }
+                try {
+                    context.startActivity(intent)
+                } catch (e: Exception) {
+                    val webIntent = Intent(Intent.ACTION_VIEW).apply {
+                        data = Uri.parse("https://www.google.com/maps/search/hospital+dhaka+bangladesh/@23.8103,90.4125,12z")
+                    }
+                    context.startActivity(webIntent)
+                }
+            },
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = Color(0xFFFFEBEE)
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Surface(
+                modifier = Modifier.size(50.dp),
+                shape = RoundedCornerShape(25.dp),
+                color = Color(0xFFE57373)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.LocalHospital,
+                    contentDescription = "Health Assistance",
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(12.dp),
+                    tint = Color.White
+                )
+            }
+            
+            Spacer(modifier = Modifier.width(16.dp))
+            
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(
+                    text = "Health Assistance",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color(0xFFD32F2F)
+                )
+                Text(
+                    text = "Take stairs instead of elevators when possible",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color(0xFFD32F2F).copy(alpha = 0.7f)
+                )
             }
         }
     }

@@ -1,5 +1,6 @@
 package com.example.fitpro.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -9,10 +10,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.fitpro.Screen
 import com.example.fitpro.data.UserDao
@@ -40,69 +45,93 @@ fun LoginScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(24.dp),
+            .background(Color.White)
+            .padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
         // App Title
         Text(
             text = "FitPro",
-            style = MaterialTheme.typography.headlineLarge,
+            fontSize = 32.sp,
             fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary,
+            color = Color(0xFF6366F1),
             modifier = Modifier.padding(bottom = 8.dp)
         )
         
         Text(
             text = "Welcome back! Let's get fit together",
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-            modifier = Modifier.padding(bottom = 40.dp)
+            fontSize = 16.sp,
+            color = Color(0xFF6B7280),
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(bottom = 48.dp)
         )
 
+        // Email Input Field
         OutlinedTextField(
             value = email,
             onValueChange = { email = it },
-            label = { Text("Email") },
+            placeholder = { Text("Email", color = Color(0xFF9CA3AF)) },
             leadingIcon = {
-                Icon(Icons.Default.Email, contentDescription = "Email")
+                Icon(
+                    Icons.Default.Email, 
+                    contentDescription = "Email",
+                    tint = Color(0xFF6B7280)
+                )
             },
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 16.dp)
-                .shadow(2.dp, RoundedCornerShape(12.dp)),
-            shape = RoundedCornerShape(12.dp),
+                .padding(bottom = 16.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                unfocusedBorderColor = Color(0xFFE5E7EB),
+                focusedBorderColor = Color(0xFF6366F1),
+                unfocusedContainerColor = Color(0xFFF9FAFB),
+                focusedContainerColor = Color(0xFFF9FAFB)
+            ),
             singleLine = true
         )
 
+        // Password Input Field
         OutlinedTextField(
             value = password,
             onValueChange = { password = it },
-            label = { Text("Password") },
+            placeholder = { Text("Password", color = Color(0xFF9CA3AF)) },
             leadingIcon = {
-                Icon(Icons.Default.Lock, contentDescription = "Password")
+                Icon(
+                    Icons.Default.Lock, 
+                    contentDescription = "Password",
+                    tint = Color(0xFF6B7280)
+                )
             },
             trailingIcon = {
                 IconButton(onClick = { showPassword = !showPassword }) {
                     Icon(
                         if (showPassword) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                        contentDescription = if (showPassword) "Hide password" else "Show password"
+                        contentDescription = if (showPassword) "Hide password" else "Show password",
+                        tint = Color(0xFF6B7280)
                     )
                 }
             },
             visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 16.dp)
-                .shadow(2.dp, RoundedCornerShape(12.dp)),
-            shape = RoundedCornerShape(12.dp),
+                .padding(bottom = 16.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                unfocusedBorderColor = Color(0xFFE5E7EB),
+                focusedBorderColor = Color(0xFF6366F1),
+                unfocusedContainerColor = Color(0xFFF9FAFB),
+                focusedContainerColor = Color(0xFFF9FAFB)
+            ),
             singleLine = true
         )
 
+        // Remember Me and Forgot Password Row
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 16.dp),
+                .padding(bottom = 24.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -111,12 +140,24 @@ fun LoginScreen(
             ) {
                 Checkbox(
                     checked = rememberMe,
-                    onCheckedChange = { rememberMe = it }
+                    onCheckedChange = { rememberMe = it },
+                    colors = CheckboxDefaults.colors(
+                        checkedColor = Color(0xFF6366F1)
+                    )
                 )
-                Text("Remember me")
+                Text(
+                    "Remember me",
+                    color = Color(0xFF374151),
+                    fontSize = 14.sp
+                )
             }
             TextButton(onClick = { /* TODO: Implement forgot password */ }) {
-                Text("Forgot Password?")
+                Text(
+                    "Forgot Password?",
+                    color = Color(0xFF6366F1),
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium
+                )
             }
         }
 
@@ -125,20 +166,22 @@ fun LoginScreen(
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 8.dp),
+                    .padding(bottom = 16.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.errorContainer
-                )
+                    containerColor = Color(0xFFFEF2F2)
+                ),
+                shape = RoundedCornerShape(12.dp)
             ) {
                 Text(
                     text = errorMessage,
-                    modifier = Modifier.padding(12.dp),
-                    color = MaterialTheme.colorScheme.onErrorContainer,
-                    style = MaterialTheme.typography.bodyMedium
+                    modifier = Modifier.padding(16.dp),
+                    color = Color(0xFFDC2626),
+                    fontSize = 14.sp
                 )
             }
         }
 
+        // Login Button with Gradient
         Button(
             onClick = { 
                 coroutineScope.launch {
@@ -183,18 +226,30 @@ fun LoginScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp)
-                .shadow(4.dp, RoundedCornerShape(16.dp)),
-            shape = RoundedCornerShape(16.dp)
+                .background(
+                    brush = Brush.horizontalGradient(
+                        colors = listOf(
+                            Color(0xFF6366F1),
+                            Color(0xFF8B5CF6)
+                        )
+                    ),
+                    shape = RoundedCornerShape(16.dp)
+                ),
+            shape = RoundedCornerShape(16.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color.Transparent
+            )
         ) {
             if (isLoading) {
                 CircularProgressIndicator(
                     modifier = Modifier.size(20.dp),
-                    color = MaterialTheme.colorScheme.onPrimary
+                    color = Color.White
                 )
             } else {
                 Text(
                     text = "Login",
-                    style = MaterialTheme.typography.titleMedium,
+                    color = Color.White,
+                    fontSize = 16.sp,
                     fontWeight = FontWeight.SemiBold
                 )
             }
@@ -202,71 +257,95 @@ fun LoginScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Divider with "OR"
+        // OR Divider
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            HorizontalDivider(modifier = Modifier.weight(1f))
+            HorizontalDivider(
+                modifier = Modifier.weight(1f),
+                color = Color(0xFFE5E7EB)
+            )
             Text(
                 text = "  OR  ",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                fontSize = 14.sp,
+                color = Color(0xFF6B7280)
             )
-            HorizontalDivider(modifier = Modifier.weight(1f))
+            HorizontalDivider(
+                modifier = Modifier.weight(1f),
+                color = Color(0xFFE5E7EB)
+            )
         }
 
         Spacer(modifier = Modifier.height(24.dp))
 
+        // Don't have account text
         TextButton(
             onClick = { navController.navigate(Screen.SignUp.route) },
-            modifier = Modifier.padding(top = 16.dp)
+            modifier = Modifier.padding(bottom = 16.dp)
         ) {
             Text(
                 text = "Don't have an account? Sign Up",
-                color = MaterialTheme.colorScheme.primary,
+                color = Color(0xFF6366F1),
+                fontSize = 14.sp,
                 fontWeight = FontWeight.Medium
             )
         }
 
         // Social login buttons
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 16.dp),
+            modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             OutlinedButton(
                 onClick = { /* TODO: Implement Google login */ },
                 modifier = Modifier
                     .weight(1f)
-                    .height(56.dp)
-                    .shadow(2.dp, RoundedCornerShape(16.dp)),
-                shape = RoundedCornerShape(16.dp)
+                    .height(56.dp),
+                shape = RoundedCornerShape(16.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE5E7EB)),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    containerColor = Color.White
+                )
             ) {
                 Icon(
                     Icons.Default.AccountCircle,
                     contentDescription = "Google",
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier.size(20.dp),
+                    tint = Color(0xFF6B7280)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Google")
+                Text(
+                    "Google",
+                    color = Color(0xFF374151),
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium
+                )
             }
             OutlinedButton(
                 onClick = { /* TODO: Implement Apple login */ },
                 modifier = Modifier
                     .weight(1f)
-                    .height(56.dp)
-                    .shadow(2.dp, RoundedCornerShape(16.dp)),
-                shape = RoundedCornerShape(16.dp)
+                    .height(56.dp),
+                shape = RoundedCornerShape(16.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE5E7EB)),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    containerColor = Color.White
+                )
             ) {
                 Icon(
                     Icons.Default.Smartphone,
                     contentDescription = "Apple",
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier.size(20.dp),
+                    tint = Color(0xFF6B7280)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Apple")
+                Text(
+                    "Apple",
+                    color = Color(0xFF374151),
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium
+                )
             }
         }
     }

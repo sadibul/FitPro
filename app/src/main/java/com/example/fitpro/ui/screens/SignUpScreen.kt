@@ -1,14 +1,22 @@
 package com.example.fitpro.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.fitpro.Screen
 import com.example.fitpro.data.UserDao
@@ -26,6 +34,8 @@ fun SignUpScreen(
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
+    var showPassword by remember { mutableStateOf(false) }
+    var showConfirmPassword by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
@@ -33,60 +43,139 @@ fun SignUpScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp),
+            .background(Color.White)
+            .padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
+        // Title
         Text(
             text = "Create Account",
-            style = MaterialTheme.typography.headlineMedium,
-            modifier = Modifier.padding(bottom = 32.dp)
+            fontSize = 28.sp,
+            fontWeight = FontWeight.Bold,
+            color = Color(0xFF374151),
+            modifier = Modifier.padding(bottom = 48.dp),
+            textAlign = TextAlign.Center
         )
 
+        // Full Name Input Field
         OutlinedTextField(
             value = name,
             onValueChange = { name = it },
-            label = { Text("Full Name") },
+            placeholder = { Text("Full Name", color = Color(0xFF9CA3AF)) },
+            leadingIcon = {
+                Icon(
+                    Icons.Default.Person, 
+                    contentDescription = "Full Name",
+                    tint = Color(0xFF6B7280)
+                )
+            },
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 16.dp)
-                .shadow(4.dp, RoundedCornerShape(8.dp)),
-            shape = RoundedCornerShape(8.dp)
+                .padding(bottom = 16.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                unfocusedBorderColor = Color(0xFFE5E7EB),
+                focusedBorderColor = Color(0xFF6366F1),
+                unfocusedContainerColor = Color(0xFFF9FAFB),
+                focusedContainerColor = Color(0xFFF9FAFB)
+            ),
+            singleLine = true
         )
 
+        // Email Input Field
         OutlinedTextField(
             value = email,
             onValueChange = { email = it },
-            label = { Text("Email") },
+            placeholder = { Text("Email", color = Color(0xFF9CA3AF)) },
+            leadingIcon = {
+                Icon(
+                    Icons.Default.Email, 
+                    contentDescription = "Email",
+                    tint = Color(0xFF6B7280)
+                )
+            },
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 16.dp)
-                .shadow(4.dp, RoundedCornerShape(8.dp)),
-            shape = RoundedCornerShape(8.dp)
+                .padding(bottom = 16.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                unfocusedBorderColor = Color(0xFFE5E7EB),
+                focusedBorderColor = Color(0xFF6366F1),
+                unfocusedContainerColor = Color(0xFFF9FAFB),
+                focusedContainerColor = Color(0xFFF9FAFB)
+            ),
+            singleLine = true
         )
 
+        // Password Input Field
         OutlinedTextField(
             value = password,
             onValueChange = { password = it },
-            label = { Text("Password") },
-            visualTransformation = PasswordVisualTransformation(),
+            placeholder = { Text("Password", color = Color(0xFF9CA3AF)) },
+            leadingIcon = {
+                Icon(
+                    Icons.Default.Lock, 
+                    contentDescription = "Password",
+                    tint = Color(0xFF6B7280)
+                )
+            },
+            trailingIcon = {
+                IconButton(onClick = { showPassword = !showPassword }) {
+                    Icon(
+                        if (showPassword) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                        contentDescription = if (showPassword) "Hide password" else "Show password",
+                        tint = Color(0xFF6B7280)
+                    )
+                }
+            },
+            visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 16.dp)
-                .shadow(4.dp, RoundedCornerShape(8.dp)),
-            shape = RoundedCornerShape(8.dp)
+                .padding(bottom = 16.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                unfocusedBorderColor = Color(0xFFE5E7EB),
+                focusedBorderColor = Color(0xFF6366F1),
+                unfocusedContainerColor = Color(0xFFF9FAFB),
+                focusedContainerColor = Color(0xFFF9FAFB)
+            ),
+            singleLine = true
         )
 
+        // Confirm Password Input Field
         OutlinedTextField(
             value = confirmPassword,
             onValueChange = { confirmPassword = it },
-            label = { Text("Confirm Password") },
-            visualTransformation = PasswordVisualTransformation(),
+            placeholder = { Text("Confirm Password", color = Color(0xFF9CA3AF)) },
+            leadingIcon = {
+                Icon(
+                    Icons.Default.Lock, 
+                    contentDescription = "Confirm Password",
+                    tint = Color(0xFF6B7280)
+                )
+            },
+            trailingIcon = {
+                IconButton(onClick = { showConfirmPassword = !showConfirmPassword }) {
+                    Icon(
+                        if (showConfirmPassword) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                        contentDescription = if (showConfirmPassword) "Hide password" else "Show password",
+                        tint = Color(0xFF6B7280)
+                    )
+                }
+            },
+            visualTransformation = if (showConfirmPassword) VisualTransformation.None else PasswordVisualTransformation(),
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 32.dp)
-                .shadow(4.dp, RoundedCornerShape(8.dp)),
-            shape = RoundedCornerShape(8.dp)
+                .padding(bottom = 24.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                unfocusedBorderColor = Color(0xFFE5E7EB),
+                focusedBorderColor = Color(0xFF6366F1),
+                unfocusedContainerColor = Color(0xFFF9FAFB),
+                focusedContainerColor = Color(0xFFF9FAFB)
+            ),
+            singleLine = true
         )
 
         // Error message display
@@ -94,20 +183,22 @@ fun SignUpScreen(
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 8.dp),
+                    .padding(bottom = 16.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.errorContainer
-                )
+                    containerColor = Color(0xFFFEF2F2)
+                ),
+                shape = RoundedCornerShape(12.dp)
             ) {
                 Text(
                     text = errorMessage,
-                    modifier = Modifier.padding(12.dp),
-                    color = MaterialTheme.colorScheme.onErrorContainer,
-                    style = MaterialTheme.typography.bodyMedium
+                    modifier = Modifier.padding(16.dp),
+                    color = Color(0xFFDC2626),
+                    fontSize = 14.sp
                 )
             }
         }
 
+        // Sign Up Button with Gradient
         Button(
             onClick = { 
                 coroutineScope.launch {
@@ -152,45 +243,103 @@ fun SignUpScreen(
                      password.isNotEmpty() && confirmPassword.isNotEmpty() && !isLoading,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(50.dp)
-                .shadow(8.dp, RoundedCornerShape(25.dp)),
-            shape = RoundedCornerShape(25.dp)
+                .height(56.dp)
+                .background(
+                    brush = Brush.horizontalGradient(
+                        colors = listOf(
+                            Color(0xFF6366F1),
+                            Color(0xFF8B5CF6)
+                        )
+                    ),
+                    shape = RoundedCornerShape(16.dp)
+                ),
+            shape = RoundedCornerShape(16.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color.Transparent
+            )
         ) {
             if (isLoading) {
                 CircularProgressIndicator(
                     modifier = Modifier.size(20.dp),
-                    color = MaterialTheme.colorScheme.onPrimary
+                    color = Color.White
                 )
             } else {
-                Text("Sign Up")
+                Text(
+                    text = "Sign Up",
+                    color = Color.White,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
             }
         }
 
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Already have account text
         TextButton(
             onClick = { navController.navigate(Screen.Login.route) },
-            modifier = Modifier.padding(top = 16.dp)
+            modifier = Modifier.padding(bottom = 16.dp)
         ) {
-            Text("Already have an account? Login")
+            Text(
+                text = "Already have an account? Login",
+                color = Color(0xFF6366F1),
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium
+            )
         }
 
         // Social signup buttons
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 32.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Button(
                 onClick = { /* TODO: Implement Google signup */ },
-                modifier = Modifier.shadow(4.dp, RoundedCornerShape(8.dp))
+                modifier = Modifier
+                    .weight(1f)
+                    .height(56.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF4285F4)
+                )
             ) {
-                Text("Google")
+                Icon(
+                    Icons.Default.AccountCircle,
+                    contentDescription = "Google",
+                    modifier = Modifier.size(20.dp),
+                    tint = Color.White
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    "Google",
+                    color = Color.White,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium
+                )
             }
             Button(
                 onClick = { /* TODO: Implement Apple signup */ },
-                modifier = Modifier.shadow(4.dp, RoundedCornerShape(8.dp))
+                modifier = Modifier
+                    .weight(1f)
+                    .height(56.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF007AFF)
+                )
             ) {
-                Text("Apple")
+                Icon(
+                    Icons.Default.Smartphone,
+                    contentDescription = "Apple",
+                    modifier = Modifier.size(20.dp),
+                    tint = Color.White
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    "Apple",
+                    color = Color.White,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium
+                )
             }
         }
     }
