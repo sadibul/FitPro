@@ -9,7 +9,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
@@ -28,7 +28,16 @@ fun PlanScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Plan") }
+                title = { 
+                    Text(
+                        "Plan",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.SemiBold
+                    ) 
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background
+                )
             )
         }
     ) { padding ->
@@ -36,58 +45,70 @@ fun PlanScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(16.dp),
+                .padding(horizontal = 16.dp, vertical = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
             Text(
                 text = "Choose Your Plan",
                 style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onBackground
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-            // Workout Plan Button
-            PlanButton(
+            // Workout Plan Card
+            ModernPlanCard(
                 title = "Workout Plan",
                 description = "Create and manage your workout routine",
-                icon = Icons.Default.FitnessCenter
+                icon = Icons.Default.FitnessCenter,
+                backgroundColor = Color(0xFFE3F2FD), // Light blue
+                iconColor = Color(0xFF2196F3)       // Blue
             ) {
                 navController.navigate(Screen.WorkoutPlan.route)
             }
 
-            // Meal Plan Button
-            PlanButton(
+            // Meal Plan Card
+            ModernPlanCard(
                 title = "Meal Plan",
                 description = "Plan your daily meals and track nutrition",
-                icon = Icons.Default.Restaurant
+                icon = Icons.Default.Restaurant,
+                backgroundColor = Color(0xFFE8F5E8), // Light green
+                iconColor = Color(0xFF4CAF50)       // Green
             ) {
                 navController.navigate(Screen.MealPlan.route)
             }
+
+            Spacer(modifier = Modifier.weight(1f))
         }
     }
 }
 
 @Composable
-private fun PlanButton(
+private fun ModernPlanCard(
     title: String,
     description: String,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
+    backgroundColor: Color,
+    iconColor: Color,
     onClick: () -> Unit
 ) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .height(120.dp)
-            .shadow(8.dp, RoundedCornerShape(16.dp))
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(16.dp)
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = Color.White
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp),
+                .padding(20.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -98,90 +119,32 @@ private fun PlanButton(
                 Text(
                     text = title,
                     style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
                     text = description,
-                    style = MaterialTheme.typography.bodyMedium
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                 )
             }
-            Icon(
-                imageVector = icon,
-                contentDescription = title,
-                modifier = Modifier.size(48.dp),
-                tint = MaterialTheme.colorScheme.primary
-            )
-        }
-    }
-}
-
-@Composable
-private fun QuickStatsSection() {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .shadow(4.dp, RoundedCornerShape(16.dp)),
-        shape = RoundedCornerShape(16.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            Text(
-                text = "Quick Stats",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
+            
+            // Icon with colored background
+            Surface(
+                modifier = Modifier.size(60.dp),
+                shape = RoundedCornerShape(30.dp),
+                color = backgroundColor
             ) {
-                StatItem(
-                    icon = Icons.Default.Timer,
-                    value = "45min",
-                    label = "Workout"
-                )
-                StatItem(
-                    icon = Icons.Default.LocalFireDepartment,
-                    value = "320",
-                    label = "Calories"
-                )
-                StatItem(
-                    icon = Icons.Default.TrendingUp,
-                    value = "Good",
-                    label = "Progress"
+                Icon(
+                    imageVector = icon,
+                    contentDescription = title,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp),
+                    tint = iconColor
                 )
             }
         }
     }
 }
 
-@Composable
-private fun StatItem(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    value: String,
-    label: String
-) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(4.dp)
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = label,
-            tint = MaterialTheme.colorScheme.primary
-        )
-        Text(
-            text = value,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold
-        )
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodySmall
-        )
-    }
-}
