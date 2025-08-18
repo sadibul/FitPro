@@ -7,6 +7,7 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -37,6 +38,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.layout.ContentScale
@@ -210,6 +212,13 @@ fun HomeScreen(
 
         // Health Assistance Card (replaces both health tips and medical assistance)
         ModernHealthAssistanceCard(
+            modifier = Modifier.fillMaxWidth()
+        )
+        
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Health Tips Card with cycling tips
+        ModernHealthTipsCard(
             modifier = Modifier.fillMaxWidth()
         )
         
@@ -407,6 +416,7 @@ private fun WorkoutCard(
             .shadow(4.dp, RoundedCornerShape(12.dp))
             .clickable { showModal = true }, // Make card clickable to open modal
         shape = RoundedCornerShape(12.dp),
+        border = BorderStroke(1.dp, Color(0xFFE0E0E0)), // Light grey stroke
         colors = CardDefaults.cardColors(
             containerColor = when {
                 isTimerRunning -> MaterialTheme.colorScheme.primaryContainer
@@ -419,96 +429,51 @@ private fun WorkoutCard(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(12.dp),
-            verticalArrangement = Arrangement.SpaceBetween
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.Start
         ) {
-            // Top section with icon and close button
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = getWorkoutIcon(workout.type),
-                        contentDescription = workout.type,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(24.dp) // Consistent icon size
-                    )
-                    
-                    // Timer indicator
-                    if (isTimerActive) {
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Icon(
-                            imageVector = if (isTimerRunning) Icons.Default.PlayArrow else Icons.Default.Pause,
-                            contentDescription = "Timer status",
-                            modifier = Modifier.size(12.dp),
-                            tint = if (isTimerRunning) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-                
-                IconButton(
-                    onClick = onDelete,
-                    modifier = Modifier.size(20.dp)
-                ) {
-                    Icon(
-                        Icons.Default.Close,
-                        contentDescription = "Delete workout",
-                        modifier = Modifier.size(16.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+            // Content section with consistent spacing
+            Text(
+                text = workout.categoryName.ifEmpty { workout.type },
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+            
+            Spacer(modifier = Modifier.height(4.dp))
+            
+            // Show timer or duration
+            if (isTimerActive && currentRemainingTime > 0) {
+                Text(
+                    text = formatTime(currentRemainingTime),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (isTimerRunning) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontWeight = FontWeight.Medium
+                )
+            } else if (isTimerActive && currentRemainingTime <= 0) {
+                Text(
+                    text = "TIME UP!",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                    fontWeight = FontWeight.Bold
+                )
+            } else {
+                Text(
+                    text = "${workout.duration} min",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
             
-            // Content section with consistent spacing
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.Center
-            ) {
-                Text(
-                    text = workout.categoryName.ifEmpty { workout.type },
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-                
-                Spacer(modifier = Modifier.height(4.dp))
-                
-                // Show timer or duration
-                if (isTimerActive && currentRemainingTime > 0) {
-                    Text(
-                        text = formatTime(currentRemainingTime),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = if (isTimerRunning) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                        fontWeight = FontWeight.Medium
-                    )
-                } else if (isTimerActive && currentRemainingTime <= 0) {
-                    Text(
-                        text = "TIME UP!",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error,
-                        fontWeight = FontWeight.Bold
-                    )
-                } else {
-                    Text(
-                        text = "${workout.duration} min",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                
-                Spacer(modifier = Modifier.height(2.dp))
-                
-                // Always show calories section for consistency
-                Text(
-                    text = workout.targetCalories?.let { "$it cal" } ?: "No calories",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
-                )
-            }
+            Spacer(modifier = Modifier.height(2.dp))
+            
+            // Always show calories section for consistency
+            Text(
+                text = workout.targetCalories?.let { "$it cal" } ?: "No calories",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+            )
         }
     }
     
@@ -2317,6 +2282,7 @@ private fun ModernHealthAssistanceCard(modifier: Modifier = Modifier) {
     
     Card(
         modifier = modifier
+            .height(120.dp) // Double the height (was around 60dp, now 120dp)
             .clickable {
                 val intent = Intent(Intent.ACTION_VIEW).apply {
                     data = Uri.parse("geo:23.8103,90.4125?q=hospital+dhaka+bangladesh")
@@ -2333,7 +2299,54 @@ private fun ModernHealthAssistanceCard(modifier: Modifier = Modifier) {
             },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color(0xFFFFEBEE)
+            containerColor = Color.White // White background
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        // Map image that fits the entire card
+        Image(
+            painter = painterResource(R.drawable.map_image),
+            contentDescription = "Map",
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop
+        )
+    }
+}
+
+@Composable
+private fun ModernHealthTipsCard(modifier: Modifier = Modifier) {
+    val healthTips = listOf(
+        "Daily Tip: Practice deep breathing for 5 minutes daily to reduce stress and improve overall wellness.",
+        "Daily Tip: Take stairs instead of elevators when possible to boost your daily activity.",
+        "Daily Tip: Drink at least 8 glasses of water throughout the day to stay properly hydrated.",
+        "Daily Tip: Get 7-9 hours of quality sleep each night for optimal physical and mental health.",
+        "Daily Tip: Take a 10-minute walk after meals to aid digestion and regulate blood sugar.",
+        "Daily Tip: Eat a handful of nuts daily for healthy fats and protein to fuel your body.",
+        "Daily Tip: Practice good posture while sitting and standing to prevent back pain.",
+        "Daily Tip: Limit screen time before bed to improve sleep quality and reduce eye strain.",
+        "Daily Tip: Include colorful fruits and vegetables in every meal for essential vitamins.",
+        "Daily Tip: Do 5 minutes of stretching in the morning to increase flexibility and energy."
+    )
+    
+    var currentTipIndex by remember { mutableIntStateOf(0) }
+    var isVisible by remember { mutableStateOf(true) }
+    
+    // Auto-cycle through tips every 4 seconds
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(4000)
+            isVisible = false
+            delay(300) // Wait for fade out
+            currentTipIndex = (currentTipIndex + 1) % healthTips.size
+            isVisible = true
+        }
+    }
+    
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = Color(0xFFFAFAFA) // Whitish background
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
@@ -2344,35 +2357,44 @@ private fun ModernHealthAssistanceCard(modifier: Modifier = Modifier) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Surface(
-                modifier = Modifier.size(50.dp),
-                shape = RoundedCornerShape(25.dp),
-                color = Color(0xFFE57373)
+                modifier = Modifier.size(40.dp),
+                shape = RoundedCornerShape(20.dp),
+                color = Color(0xFFFF9800) // Orange background for lightbulb
             ) {
                 Icon(
-                    imageVector = Icons.Default.LocalHospital,
-                    contentDescription = "Health Assistance",
+                    imageVector = Icons.Default.Lightbulb,
+                    contentDescription = "Health Tip",
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(12.dp),
+                        .padding(8.dp),
                     tint = Color.White
                 )
             }
             
             Spacer(modifier = Modifier.width(16.dp))
             
-            Column(
+            // Animated text with smooth transition
+            androidx.compose.animation.AnimatedVisibility(
+                visible = isVisible,
+                enter = androidx.compose.animation.fadeIn(
+                    animationSpec = androidx.compose.animation.core.tween(300)
+                ) + androidx.compose.animation.slideInHorizontally(
+                    animationSpec = androidx.compose.animation.core.tween(300),
+                    initialOffsetX = { it / 3 }
+                ),
+                exit = androidx.compose.animation.fadeOut(
+                    animationSpec = androidx.compose.animation.core.tween(300)
+                ) + androidx.compose.animation.slideOutHorizontally(
+                    animationSpec = androidx.compose.animation.core.tween(300),
+                    targetOffsetX = { -it / 3 }
+                ),
                 modifier = Modifier.weight(1f)
             ) {
                 Text(
-                    text = "Health Assistance",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Color(0xFFD32F2F)
-                )
-                Text(
-                    text = "Take stairs instead of elevators when possible",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color(0xFFD32F2F).copy(alpha = 0.7f)
+                    text = healthTips[currentTipIndex],
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color(0xFF424242), // Dark gray text
+                    lineHeight = 20.sp
                 )
             }
         }
