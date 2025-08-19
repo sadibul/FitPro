@@ -1207,7 +1207,7 @@ private fun ActivityStatCardEnhanced(
         Column(
             modifier = Modifier
                 .padding(8.dp)
-                .heightIn(min = 100.dp), // Match StepCounterCard height approximately
+                .heightIn(min = 140.dp), // Match StepCounterCard height
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
@@ -1452,6 +1452,7 @@ private fun StepCounterCard(
     
     Card(
         modifier = modifier
+            .heightIn(min = 140.dp)
             .clickable { onClick() }
             .shadow(4.dp, RoundedCornerShape(12.dp)),
         shape = RoundedCornerShape(12.dp)
@@ -1467,10 +1468,10 @@ private fun StepCounterCard(
             )
             Spacer(modifier = Modifier.height(4.dp))
             
-            // Show "Completed" when target is achieved, otherwise show current steps
+            // Show "Done" when target is achieved, otherwise show current steps
             if (isTargetCompleted && steps >= stepTarget) {
                 Text(
-                    text = "Completed",
+                    text = "Done",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary
@@ -1503,9 +1504,9 @@ private fun StepCounterCard(
                 
                 Text(
                     text = if (isTargetCompleted && steps >= stepTarget) {
-                        "$stepTarget / $stepTarget" // Show completed as target/target
+                        "$stepTarget/$stepTarget" // Show completed as target/target
                     } else {
-                        "$displaySteps / $stepTarget" // Show progress
+                        "${minOf(steps, stepTarget)}/$stepTarget" // Show actual progress
                     },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
@@ -2211,7 +2212,7 @@ private fun ModernStepCounterCard(
     Card(
         modifier = modifier
             .clickable { onClick() }
-            .height(110.dp),
+            .height(140.dp),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
             containerColor = Color(0xFFE3F2FD)
@@ -2233,12 +2234,13 @@ private fun ModernStepCounterCard(
             )
             Spacer(modifier = Modifier.height(4.dp))
             
+            // Show "Done" when target is completed, otherwise show step count
             if (isTargetCompleted && steps >= stepTarget) {
                 Text(
                     text = "Done",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF2196F3)
+                    color = Color(0xFF4CAF50) // Green color for completed
                 )
             } else {
                 Text(
@@ -2256,16 +2258,21 @@ private fun ModernStepCounterCard(
                 textAlign = TextAlign.Center
             )
             
+            // Show progress format below steps
             if (hasTarget) {
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = if (isTargetCompleted && steps >= stepTarget) {
-                        "Set your\ntarget"
+                        "$stepTarget/$stepTarget"
                     } else {
-                        "Set your\ntarget"
+                        "${minOf(steps, stepTarget)}/$stepTarget"
                     },
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color(0xFF2196F3),
+                    color = if (isTargetCompleted && steps >= stepTarget) {
+                        Color(0xFF4CAF50) // Green when completed
+                    } else {
+                        Color(0xFF2196F3)
+                    },
                     textAlign = TextAlign.Center,
                     fontWeight = FontWeight.Medium
                 )
@@ -2296,7 +2303,7 @@ private fun ModernActivityStatCard(
     Card(
         modifier = modifier
             .clickable { onClick() }
-            .height(110.dp),
+            .height(140.dp),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
             containerColor = backgroundColor
