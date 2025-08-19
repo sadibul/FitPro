@@ -1243,36 +1243,34 @@ private fun generateWeeklyStepsData(
     
     val weeklyData = mutableListOf<DayData>()
     
+    // Calculate cumulative sum of completed step targets up to each day
+    var cumulativeTargetSum = 0
+    
+    // First, get all completed targets before this week
+    val weekStartDate = weekDates[0]
+    val targetsBeforeWeek = completedStepTargets.filter { target ->
+        val targetDateString = TimeUtils.convertToBangladeshDay(target.completedAt)
+        targetDateString < weekStartDate
+    }
+    cumulativeTargetSum = targetsBeforeWeek.sumOf { it.targetSteps }
+    
     // Generate data for each day of the week
     for (dayIndex in 0..6) {
         val dayDate = weekDates[dayIndex]
         
-        // Sum all completed step targets for this day
-        val completedSteps = stepTargetsByDate[dayDate]
-            ?.sumOf { it.actualSteps } ?: 0
+        // Sum completed step targets for this specific day only
+        val dayCompletedTargets = stepTargetsByDate[dayDate]
+            ?.sumOf { it.targetSteps } ?: 0
         
-        // Map Calendar day of week to our array index (0=Sunday, 1=Monday, etc.)
-        val currentDayIndex = when (currentDayOfWeek) {
-            java.util.Calendar.SUNDAY -> 0
-            java.util.Calendar.MONDAY -> 1
-            java.util.Calendar.TUESDAY -> 2
-            java.util.Calendar.WEDNESDAY -> 3
-            java.util.Calendar.THURSDAY -> 4
-            java.util.Calendar.FRIDAY -> 5
-            java.util.Calendar.SATURDAY -> 6
-            else -> 0
-        }
+        // Add this day's completed targets to cumulative sum
+        cumulativeTargetSum += dayCompletedTargets
         
-        // Add current user's daily steps if this is today
-        val finalSteps = if (dayIndex == currentDayIndex && userProfile != null) {
-            completedSteps + userProfile.dailySteps
-        } else {
-            completedSteps
-        }
+        // Only show data if there are completed targets up to this day
+        val displayValue = if (cumulativeTargetSum > 0) cumulativeTargetSum else 0
         
         weeklyData.add(
             DayData(
-                steps = finalSteps.toFloat(),
+                steps = displayValue.toFloat(),
                 caloriesBurned = 0f, // Not used for step chart
                 caloriesConsumed = 0f, // Not used for step chart
                 workouts = 0 // Not used for step chart
@@ -1335,6 +1333,9 @@ private fun generateYearlyStepsData(
         dateFormat.format(targetDate) // Format as "yyyy-MM"
     }
     
+    // Calculate cumulative sum of completed step targets up to each month
+    var cumulativeTargetSum = 0
+    
     // Generate 12 months of data
     for (monthIndex in 0..11) {
         val monthCalendar = bangladeshCalendar.clone() as java.util.Calendar
@@ -1348,13 +1349,19 @@ private fun generateYearlyStepsData(
         
         val monthString = dateFormat.format(monthCalendar.time)
         
-        // Sum all completed step targets for this month
-        val monthSteps = stepTargetsByMonth[monthString]
-            ?.sumOf { it.actualSteps } ?: 0
+        // Sum completed step targets for this specific month only
+        val monthCompletedTargets = stepTargetsByMonth[monthString]
+            ?.sumOf { it.targetSteps } ?: 0
+        
+        // Add this month's completed targets to cumulative sum
+        cumulativeTargetSum += monthCompletedTargets
+        
+        // Only show data if there are completed targets up to this month
+        val displayValue = if (cumulativeTargetSum > 0) cumulativeTargetSum else 0
         
         yearlyData.add(
             DayData(
-                steps = monthSteps.toFloat(),
+                steps = displayValue.toFloat(),
                 caloriesBurned = 0f, // Not used for step chart
                 caloriesConsumed = 0f, // Not used for step chart
                 workouts = 0 // Not used for step chart
