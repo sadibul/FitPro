@@ -859,7 +859,7 @@ private fun SandowScoreChart(
                             val xAxisLabels = if (currentPeriod == "Weekly") {
                                 listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
                             } else {
-                                listOf("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+                                listOf("J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D")
                             }
                             
                             // Use the maxValue parameter which represents the top Y-axis value for Weekly
@@ -915,6 +915,27 @@ private fun SandowScoreChart(
                                     
                                     // Value label on highlighted bar
                                     if (isHighlighted && value > 0) {
+                                        val valueString = value.toInt().toString()
+                                        val textLength = valueString.length
+                                        
+                                        // More aggressive width calculation for larger numbers
+                                        val dynamicWidth = when {
+                                            textLength <= 2 -> 32.dp
+                                            textLength == 3 -> 40.dp
+                                            textLength == 4 -> 48.dp
+                                            textLength == 5 -> 56.dp
+                                            else -> (textLength * 12).dp
+                                        }
+                                        
+                                        // More aggressive font size reduction for larger numbers
+                                        val dynamicFontSize = when {
+                                            textLength <= 2 -> 12.sp
+                                            textLength == 3 -> 10.sp
+                                            textLength == 4 -> 9.sp
+                                            textLength == 5 -> 8.sp
+                                            else -> 7.sp
+                                        }
+                                        
                                         Card(
                                             colors = CardDefaults.cardColors(
                                                 containerColor = Color.Black
@@ -922,20 +943,20 @@ private fun SandowScoreChart(
                                             shape = RoundedCornerShape(4.dp),
                                             modifier = Modifier
                                                 .wrapContentWidth()
-                                                .widthIn(min = 32.dp) // Ensure minimum width for larger numbers
+                                                .widthIn(min = dynamicWidth)
                                         ) {
                                             Text(
-                                                text = value.toInt().toString(),
+                                                text = valueString,
                                                 color = Color.White,
                                                 style = MaterialTheme.typography.bodySmall,
-                                                fontSize = 12.sp, // Explicit font size
+                                                fontSize = dynamicFontSize,
                                                 modifier = Modifier.padding(
-                                                    horizontal = if (currentPeriod == "Weekly") 8.dp else 6.dp,
-                                                    vertical = 4.dp
+                                                    horizontal = maxOf(3.dp, (textLength * 1.5).dp),
+                                                    vertical = 3.dp
                                                 ),
                                                 textAlign = TextAlign.Center,
-                                                overflow = TextOverflow.Visible, // Allow text to be fully visible
-                                                softWrap = false, // Keep on single line
+                                                overflow = TextOverflow.Visible,
+                                                softWrap = false,
                                                 maxLines = 1
                                             )
                                         }
@@ -1333,9 +1354,6 @@ private fun generateYearlyStepsData(
         dateFormat.format(targetDate) // Format as "yyyy-MM"
     }
     
-    // Calculate cumulative sum of completed step targets up to each month
-    var cumulativeTargetSum = 0
-    
     // Generate 12 months of data
     for (monthIndex in 0..11) {
         val monthCalendar = bangladeshCalendar.clone() as java.util.Calendar
@@ -1349,15 +1367,12 @@ private fun generateYearlyStepsData(
         
         val monthString = dateFormat.format(monthCalendar.time)
         
-        // Sum completed step targets for this specific month only
+        // Sum completed step targets for this specific month only (not cumulative)
         val monthCompletedTargets = stepTargetsByMonth[monthString]
             ?.sumOf { it.targetSteps } ?: 0
         
-        // Add this month's completed targets to cumulative sum
-        cumulativeTargetSum += monthCompletedTargets
-        
-        // Only show data if there are completed targets up to this month
-        val displayValue = if (cumulativeTargetSum > 0) cumulativeTargetSum else 0
+        // Only show the targets completed in this specific month (like other charts)
+        val displayValue = monthCompletedTargets
         
         yearlyData.add(
             DayData(

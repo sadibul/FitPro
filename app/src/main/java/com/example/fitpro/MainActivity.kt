@@ -10,15 +10,21 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.lifecycleScope
@@ -429,48 +435,93 @@ fun MainAppWithBottomNav(
 
     Scaffold(
         bottomBar = {
-            NavigationBar(
-                containerColor = Color(0xFF4A4DF4),
-                tonalElevation = 0.dp
-            ) {
-                bottomNavItems.forEach { item ->
-                    NavigationBarItem(
-                        icon = {
-                            Icon(
-                                imageVector = item.icon,
-                                contentDescription = item.label
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(90.dp) // Increased height
+                    .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
+                    .background(
+                        brush = Brush.horizontalGradient(
+                            colors = listOf(
+                                Color(0xFF6366F1), // Blue-purple
+                                Color(0xFF8B5CF6)  // Purple
                             )
-                        },
-                        label = { Text(item.label) },
-                        selected = currentDestination?.hierarchy?.any { it.route == item.route } == true,
-                        onClick = {
-                            if (currentDestination?.route == item.route) {
-                                // Same tab tapped - trigger refresh
-                                when (item.route) {
-                                    Screen.Home.route -> homeRefreshKey++
-                                    Screen.Plan.route -> planRefreshKey++
-                                    Screen.Progress.route -> progressRefreshKey++
-                                    Screen.Account.route -> accountRefreshKey++
-                                }
-                            } else {
-                                // Different tab - navigate normally
-                                navController.navigate(item.route) {
-                                    popUpTo(navController.graph.findStartDestination().id) {
-                                        saveState = true
-                                    }
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
-                            }
-                        },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = Color.White,
-                            selectedTextColor = Color.White,
-                            unselectedIconColor = Color.White.copy(alpha = 0.6f),
-                            unselectedTextColor = Color.White.copy(alpha = 0.6f),
-                            indicatorColor = Color.White.copy(alpha = 0.1f)
                         )
                     )
+            ) {
+                NavigationBar(
+                    containerColor = Color.Transparent, // Make background transparent to show gradient
+                    tonalElevation = 0.dp,
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    bottomNavItems.forEach { item ->
+                        val isSelected = currentDestination?.hierarchy?.any { it.route == item.route } == true
+                        
+                        NavigationBarItem(
+                            icon = {
+                                // Use custom icons from drawable folder
+                                val iconResource = when (item.route) {
+                                    Screen.Home.route -> R.drawable.home
+                                    Screen.Plan.route -> R.drawable.plan
+                                    Screen.Progress.route -> R.drawable.progress
+                                    Screen.Account.route -> R.drawable.account
+                                    else -> R.drawable.home // fallback
+                                }
+                                
+                                Icon(
+                                    painter = painterResource(id = iconResource),
+                                    contentDescription = item.label,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            },
+                            label = { 
+                                Text(
+                                    text = item.label,
+                                    color = Color.White
+                                ) 
+                            },
+                            selected = isSelected,
+                            onClick = {
+                                if (currentDestination?.route == item.route) {
+                                    // Same tab tapped - trigger refresh
+                                    when (item.route) {
+                                        Screen.Home.route -> homeRefreshKey++
+                                        Screen.Plan.route -> planRefreshKey++
+                                        Screen.Progress.route -> progressRefreshKey++
+                                        Screen.Account.route -> accountRefreshKey++
+                                    }
+                                } else {
+                                    // Different tab - navigate with proper back stack management
+                                    when (item.route) {
+                                        Screen.Home.route -> {
+                                            // Always clear back stack when going to Home
+                                            navController.navigate(Screen.Home.route) {
+                                                popUpTo(0) { inclusive = true }
+                                                launchSingleTop = true
+                                            }
+                                        }
+                                        else -> {
+                                            // For other bottom nav items, clear back to Home
+                                            navController.navigate(item.route) {
+                                                popUpTo(Screen.Home.route) {
+                                                    inclusive = false
+                                                }
+                                                launchSingleTop = true
+                                            }
+                                        }
+                                    }
+                                }
+                            },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = Color.White,
+                                selectedTextColor = Color.White,
+                                unselectedIconColor = Color.White.copy(alpha = 0.6f),
+                                unselectedTextColor = Color.White.copy(alpha = 0.6f),
+                                indicatorColor = Color.White.copy(alpha = 0.1f)
+                            )
+                        )
+                    }
                 }
             }
         }
@@ -524,6 +575,7 @@ fun MainAppWithBottomNav(
                         userDao = userDao,
                         currentUserEmail = userEmail,
                         userSession = userSession,
+                        userProfileFlow = userProfileFlow,
                         onLogout = onLogout
                     )
                 }

@@ -21,6 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
@@ -52,12 +53,10 @@ fun AccountScreen(
     userDao: UserDao,
     currentUserEmail: String,
     userSession: UserSession,
+    userProfileFlow: Flow<UserProfile?>,
     onLogout: () -> Unit
 ) {
-    val userFlow: Flow<UserProfile?> = remember(currentUserEmail) {
-        userDao.getUserProfile(currentUserEmail)
-    }
-    val userProfile by userFlow.collectAsStateWithLifecycle(initialValue = null)
+    val userProfile by userProfileFlow.collectAsStateWithLifecycle(initialValue = null)
     val coroutineScope = rememberCoroutineScope()
     
     val context = LocalContext.current
@@ -195,33 +194,33 @@ fun AccountScreen(
             // User Info Card
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(20.dp),
+                shape = RoundedCornerShape(16.dp), // Reduced from 20dp
                 colors = CardDefaults.cardColors(
                     containerColor = Color.White
                 ),
                 elevation = CardDefaults.cardElevation(
-                    defaultElevation = 8.dp
+                    defaultElevation = 4.dp // Reduced from 8dp
                 )
             ) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp),
+                        .padding(12.dp), // Reduced from 16dp
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = userProfile?.email ?: currentUserEmail,
-                        style = MaterialTheme.typography.headlineSmall,
+                        text = userProfile?.name ?: "User Name",
+                        style = MaterialTheme.typography.titleLarge, // Changed from headlineSmall
                         fontWeight = FontWeight.Bold,
                         textAlign = TextAlign.Center,
                         color = Color.Black
                     )
                     
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(6.dp)) // Reduced from 8dp
                     
                     Text(
                         text = userProfile?.email ?: currentUserEmail,
-                        style = MaterialTheme.typography.bodyLarge,
+                        style = MaterialTheme.typography.bodyMedium, // Changed from bodyLarge
                         color = Color.Black.copy(alpha = 0.6f),
                         textAlign = TextAlign.Center
                     )
@@ -341,37 +340,31 @@ private fun ProfileImageSection(
 private fun StatsCardsRow(userProfile: UserProfile?) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(16.dp), // Reduced from 20dp
         colors = CardDefaults.cardColors(
             containerColor = Color.White
         ),
         elevation = CardDefaults.cardElevation(
-            defaultElevation = 8.dp
+            defaultElevation = 4.dp // Reduced from 8dp
         )
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(20.dp),
+                .padding(12.dp), // Reduced from 20dp
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
             StatCard(
-                icon = Icons.Default.MonitorWeight,
                 value = "${userProfile?.weight?.toInt() ?: 0} kg",
-                label = "Weight",
-                iconColor = Color(0xFF4A90E2)
+                label = "Weight"
             )
             StatCard(
-                icon = Icons.Default.Height,
                 value = "${userProfile?.height ?: 0} ft",
-                label = "Height",
-                iconColor = Color(0xFF4A90E2)
+                label = "Height"
             )
             StatCard(
-                icon = Icons.Default.Cake,
                 value = "${userProfile?.age ?: 0}",
-                label = "Years",
-                iconColor = Color(0xFF4A90E2)
+                label = "Years"
             )
         }
     }
@@ -379,41 +372,22 @@ private fun StatsCardsRow(userProfile: UserProfile?) {
 
 @Composable
 private fun StatCard(
-    icon: ImageVector,
     value: String,
-    label: String,
-    iconColor: Color
+    label: String
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
-        modifier = Modifier.padding(8.dp)
+        modifier = Modifier.padding(4.dp) // Reduced from 8dp
     ) {
-        Surface(
-            modifier = Modifier.size(40.dp),
-            shape = RoundedCornerShape(12.dp),
-            color = iconColor.copy(alpha = 0.15f)
-        ) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    modifier = Modifier.size(20.dp),
-                    tint = iconColor
-                )
-            }
-        }
-        Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = value,
-            style = MaterialTheme.typography.titleMedium,
+            style = MaterialTheme.typography.titleSmall, // Changed from titleMedium
             fontWeight = FontWeight.Bold,
             color = Color.Black,
             textAlign = TextAlign.Center
         )
+        Spacer(modifier = Modifier.height(4.dp)) // Reduced spacing
         Text(
             text = label,
             style = MaterialTheme.typography.bodySmall,
@@ -432,21 +406,21 @@ private fun PremiumCard() {
         colors = CardDefaults.cardColors(
             containerColor = Color.White
         ),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(16.dp), // Reduced from 20dp
         elevation = CardDefaults.cardElevation(
-            defaultElevation = 8.dp
+            defaultElevation = 4.dp // Reduced from 8dp
         )
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(12.dp), // Reduced from 16dp
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Pro badge
             Surface(
-                modifier = Modifier.size(48.dp),
-                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier.size(40.dp), // Reduced from 48dp
+                shape = RoundedCornerShape(12.dp), // Reduced from 16dp
                 color = Color(0xFF4A90E2)
             ) {
                 Box(
@@ -456,32 +430,32 @@ private fun PremiumCard() {
                     Text(
                         text = "Pro",
                         color = Color.White,
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MaterialTheme.typography.titleSmall, // Changed from titleMedium
                         fontWeight = FontWeight.Bold
                     )
                 }
             }
             
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(12.dp)) // Reduced from 16dp
             
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Go Premium & Unlock",
-                    style = MaterialTheme.typography.titleLarge,
+                    text = "Go Premium &",
+                    style = MaterialTheme.typography.titleMedium, // Reduced from titleLarge
                     fontWeight = FontWeight.Bold,
                     color = Color.Black
                 )
                 Text(
-                    text = "More!",
-                    style = MaterialTheme.typography.titleLarge,
+                    text = "Unlock More!",
+                    style = MaterialTheme.typography.titleMedium, // Reduced from titleLarge
                     fontWeight = FontWeight.Bold,
                     color = Color.Black
                 )
             }
             
             Surface(
-                modifier = Modifier.size(36.dp),
-                shape = RoundedCornerShape(18.dp),
+                modifier = Modifier.size(32.dp), // Reduced from 36dp
+                shape = RoundedCornerShape(16.dp), // Reduced from 18dp
                 color = Color.Black.copy(alpha = 0.05f)
             ) {
                 Icon(
@@ -490,7 +464,7 @@ private fun PremiumCard() {
                     tint = Color.Black.copy(alpha = 0.6f),
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(8.dp)
+                        .padding(6.dp) // Reduced from 8dp
                 )
             }
         }
@@ -506,20 +480,20 @@ private fun EditProfileButton(onEditClick: () -> Unit) {
         colors = CardDefaults.cardColors(
             containerColor = Color.White
         ),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(16.dp), // Reduced from 20dp
         elevation = CardDefaults.cardElevation(
-            defaultElevation = 8.dp
+            defaultElevation = 4.dp // Reduced from 8dp
         )
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(12.dp), // Reduced from 16dp
             verticalAlignment = Alignment.CenterVertically
         ) {
             Surface(
-                modifier = Modifier.size(40.dp),
-                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.size(32.dp), // Reduced from 40dp
+                shape = RoundedCornerShape(10.dp), // Reduced from 12dp
                 color = Color(0xFF4A90E2).copy(alpha = 0.15f)
             ) {
                 Box(
@@ -530,24 +504,24 @@ private fun EditProfileButton(onEditClick: () -> Unit) {
                         imageVector = Icons.Default.Person,
                         contentDescription = null,
                         tint = Color(0xFF4A90E2),
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(16.dp) // Reduced from 20dp
                     )
                 }
             }
             
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(12.dp)) // Reduced from 16dp
             
             Text(
                 text = "Edit Profile",
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.titleSmall, // Changed from titleMedium
                 fontWeight = FontWeight.SemiBold,
                 color = Color.Black,
                 modifier = Modifier.weight(1f)
             )
             
             Surface(
-                modifier = Modifier.size(36.dp),
-                shape = RoundedCornerShape(18.dp),
+                modifier = Modifier.size(32.dp), // Reduced from 36dp
+                shape = RoundedCornerShape(16.dp), // Reduced from 18dp
                 color = Color.Black.copy(alpha = 0.05f)
             ) {
                 Icon(
@@ -556,7 +530,7 @@ private fun EditProfileButton(onEditClick: () -> Unit) {
                     tint = Color.Black.copy(alpha = 0.6f),
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(8.dp)
+                        .padding(6.dp) // Reduced from 8dp
                 )
             }
         }
@@ -572,20 +546,20 @@ private fun NotificationCard() {
         colors = CardDefaults.cardColors(
             containerColor = Color.White
         ),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(16.dp), // Reduced from 20dp
         elevation = CardDefaults.cardElevation(
-            defaultElevation = 8.dp
+            defaultElevation = 4.dp // Reduced from 8dp
         )
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(12.dp), // Reduced from 16dp
             verticalAlignment = Alignment.CenterVertically
         ) {
             Surface(
-                modifier = Modifier.size(40.dp),
-                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.size(32.dp), // Reduced from 40dp
+                shape = RoundedCornerShape(10.dp), // Reduced from 12dp
                 color = Color(0xFF4A90E2).copy(alpha = 0.15f)
             ) {
                 Box(
@@ -596,16 +570,16 @@ private fun NotificationCard() {
                         imageVector = Icons.Default.Notifications,
                         contentDescription = null,
                         tint = Color(0xFF4A90E2),
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(16.dp) // Reduced from 20dp
                     )
                 }
             }
             
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(12.dp)) // Reduced from 16dp
             
             Text(
                 text = "Notification",
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.titleSmall, // Changed from titleMedium
                 fontWeight = FontWeight.SemiBold,
                 color = Color.Black,
                 modifier = Modifier.weight(1f)
@@ -634,20 +608,20 @@ private fun SettingsButton() {
         colors = CardDefaults.cardColors(
             containerColor = Color.White
         ),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(16.dp), // Reduced from 20dp
         elevation = CardDefaults.cardElevation(
-            defaultElevation = 8.dp
+            defaultElevation = 4.dp // Reduced from 8dp
         )
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(12.dp), // Reduced from 16dp
             verticalAlignment = Alignment.CenterVertically
         ) {
             Surface(
-                modifier = Modifier.size(40.dp),
-                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.size(32.dp), // Reduced from 40dp
+                shape = RoundedCornerShape(10.dp), // Reduced from 12dp
                 color = Color(0xFF4A90E2).copy(alpha = 0.15f)
             ) {
                 Box(
@@ -658,24 +632,24 @@ private fun SettingsButton() {
                         imageVector = Icons.Default.Settings,
                         contentDescription = null,
                         tint = Color(0xFF4A90E2),
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(16.dp) // Reduced from 20dp
                     )
                 }
             }
             
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(12.dp)) // Reduced from 16dp
             
             Text(
                 text = "Setting",
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.titleSmall, // Changed from titleMedium
                 fontWeight = FontWeight.SemiBold,
                 color = Color.Black,
                 modifier = Modifier.weight(1f)
             )
             
             Surface(
-                modifier = Modifier.size(36.dp),
-                shape = RoundedCornerShape(18.dp),
+                modifier = Modifier.size(32.dp), // Reduced from 36dp
+                shape = RoundedCornerShape(16.dp), // Reduced from 18dp
                 color = Color.Black.copy(alpha = 0.05f)
             ) {
                 Icon(
@@ -684,7 +658,7 @@ private fun SettingsButton() {
                     tint = Color.Black.copy(alpha = 0.6f),
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(8.dp)
+                        .padding(6.dp) // Reduced from 8dp
                 )
             }
         }
@@ -698,56 +672,46 @@ private fun LogoutButton(onLogoutClick: () -> Unit) {
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .height(48.dp)
+            .height(56.dp) // Increased from 42dp for better touch target
             .clickable {
                 if (!isLoggingOut) {
                     isLoggingOut = true
                     onLogoutClick()
                 }
             },
-        shape = RoundedCornerShape(24.dp),
-        color = if (isLoggingOut) Color.Gray else Color(0xFF4A90E2),
-        shadowElevation = 6.dp
+        shape = RoundedCornerShape(12.dp), // More square-like radius
+        color = if (isLoggingOut) Color.Gray.copy(alpha = 0.3f) else Color.White,
+        shadowElevation = 8.dp, // Increased shadow effect
+        border = BorderStroke(1.5.dp, Color(0xFF2E5BBA)) // Deep blue stroke
     ) {
-        Row(
+        Box(
             modifier = Modifier.fillMaxSize(),
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically
+            contentAlignment = Alignment.Center
         ) {
             if (isLoggingOut) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(18.dp),
-                    color = Color.White,
-                    strokeWidth = 2.dp
-                )
-                Spacer(modifier = Modifier.width(10.dp))
-                Text(
-                    text = "Logging out...",
-                    color = Color.White,
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Bold
-                )
-            } else {
-                Surface(
-                    modifier = Modifier.size(20.dp),
-                    shape = RoundedCornerShape(10.dp),
-                    color = Color.White.copy(alpha = 0.2f)
+                Row(
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.ExitToApp,
-                        contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(3.dp)
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(18.dp),
+                        color = Color(0xFF2E5BBA), // Deep blue color
+                        strokeWidth = 2.dp
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = "Logging out...",
+                        color = Color(0xFF2E5BBA), // Deep blue color
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Medium
                     )
                 }
-                Spacer(modifier = Modifier.width(10.dp))
+            } else {
                 Text(
                     text = "Log Out",
-                    color = Color.White,
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Bold
+                    color = Color(0xFF2E5BBA), // Deep blue color
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Medium
                 )
             }
         }

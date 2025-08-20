@@ -28,6 +28,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -89,6 +90,9 @@ fun HomeScreen(
     val scope = rememberCoroutineScope()
     val userSession = remember { UserSession(context) }
     val currentUserEmail = userSession.getCurrentUserEmail()
+    
+    // BMI Tips Modal State
+    var showBMITipsModal by remember { mutableStateOf(false) }
     
     // Get current meal plan for the user
     val currentMealPlan by (currentUserEmail?.let { email ->
@@ -205,7 +209,7 @@ fun HomeScreen(
         ModernBMICard(
             bmi = userProfile?.calculateBMI() ?: 0f,
             category = userProfile?.getBMICategory() ?: "Unknown",
-            onClick = onBMICardClick
+            onClick = { showBMITipsModal = true }
         )
 
         Spacer(modifier = Modifier.height(20.dp))
@@ -223,6 +227,15 @@ fun HomeScreen(
         )
         
         Spacer(modifier = Modifier.height(16.dp))
+    }
+    
+    // BMI Tips Modal
+    if (showBMITipsModal) {
+        BMITipsModal(
+            bmi = userProfile?.calculateBMI() ?: 0f,
+            category = userProfile?.getBMICategory() ?: "Unknown",
+            onDismiss = { showBMITipsModal = false }
+        )
     }
 }
 }
@@ -2345,6 +2358,7 @@ private fun ModernBMICard(bmi: Float, category: String, onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
+            .height(80.dp) // Increased height
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
@@ -2355,34 +2369,64 @@ private fun ModernBMICard(bmi: Float, category: String, onClick: () -> Unit) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .fillMaxHeight() // Fill the card height
                 .padding(16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically // This will center content vertically
         ) {
-            Column {
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // BMI Icon from drawable
+                Image(
+                    painter = painterResource(id = R.drawable.bmi),
+                    contentDescription = "BMI Icon",
+                    modifier = Modifier
+                        .size(32.dp)
+                        .padding(end = 8.dp),
+                    colorFilter = ColorFilter.tint(
+                        when (category) {
+                            "Underweight" -> Color(0xFF4CAF50)
+                            "Normal" -> Color(0xFF2196F3)
+                            "Overweight" -> Color(0xFFFF9800)
+                            "Obese" -> Color(0xFFF44336)
+                            else -> Color(0xFF9E9E9E)
+                        }
+                    )
+                )
+                
+                // All text in a single line
                 Text(
                     text = "BMI",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
-                Row(
-                    verticalAlignment = Alignment.Bottom
-                ) {
-                    Text(
-                        text = String.format("%.1f", bmi),
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = category,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                    )
-                }
+                
+                Spacer(modifier = Modifier.width(8.dp))
+                
+                Text(
+                    text = String.format("%.1f", bmi),
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = when (category) {
+                        "Underweight" -> Color(0xFF4CAF50)
+                        "Normal" -> Color(0xFF2196F3)
+                        "Overweight" -> Color(0xFFFF9800)
+                        "Obese" -> Color(0xFFF44336)
+                        else -> Color(0xFF9E9E9E)
+                    }
+                )
+                
+                Spacer(modifier = Modifier.width(8.dp))
+                
+                Text(
+                    text = category,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                )
             }
+            
             Icon(
                 Icons.Default.KeyboardArrowRight,
                 contentDescription = "View BMI Details",
@@ -2469,12 +2513,12 @@ private fun ModernHealthTipsCard(modifier: Modifier = Modifier) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(12.dp), // Reduced padding from 16dp to 12dp
             verticalAlignment = Alignment.CenterVertically
         ) {
             Surface(
-                modifier = Modifier.size(40.dp),
-                shape = RoundedCornerShape(20.dp),
+                modifier = Modifier.size(32.dp), // Reduced icon size from 40dp to 32dp
+                shape = RoundedCornerShape(16.dp),
                 color = Color(0xFFFF9800) // Orange background for lightbulb
             ) {
                 Icon(
@@ -2482,12 +2526,12 @@ private fun ModernHealthTipsCard(modifier: Modifier = Modifier) {
                     contentDescription = "Health Tip",
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(8.dp),
+                        .padding(6.dp), // Reduced padding from 8dp to 6dp
                     tint = Color.White
                 )
             }
             
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(12.dp)) // Reduced spacing from 16dp to 12dp
             
             // Animated text with smooth transition
             androidx.compose.animation.AnimatedVisibility(
@@ -2508,11 +2552,208 @@ private fun ModernHealthTipsCard(modifier: Modifier = Modifier) {
             ) {
                 Text(
                     text = healthTips[currentTipIndex],
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.bodySmall, // Changed from bodyMedium to bodySmall
                     color = Color(0xFF424242), // Dark gray text
-                    lineHeight = 20.sp
+                    lineHeight = 18.sp, // Reduced from 20.sp to 18.sp
+                    fontSize = 13.sp // Explicit smaller font size for mobile
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun BMITipsModal(
+    bmi: Float,
+    category: String,
+    onDismiss: () -> Unit
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = Color.White
+            ),
+            elevation = CardDefaults.cardElevation(
+                defaultElevation = 16.dp
+            )
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp)
+            ) {
+                // Header with close button
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Spacer(modifier = Modifier.size(24.dp)) // For balance
+                    
+                    Text(
+                        text = "BMI Analysis",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Black
+                    )
+                    
+                    IconButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Close",
+                            tint = Color.Black.copy(alpha = 0.6f),
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                // BMI Value and Category - Centered
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Text(
+                            text = String.format("%.1f", bmi),
+                            style = MaterialTheme.typography.headlineLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = when (category) {
+                                "Underweight" -> Color(0xFF4CAF50)
+                                "Normal" -> Color(0xFF2196F3)
+                                "Overweight" -> Color(0xFFFF9800)
+                                "Obese" -> Color(0xFFF44336)
+                                else -> Color(0xFF9E9E9E)
+                            }
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "• $category",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = Color.Black.copy(alpha = 0.7f)
+                        )
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(20.dp))
+                
+                // Tips Section
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color(0xFFF5F5F5)
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp)
+                    ) {
+                        Text(
+                            text = "💡 Health Tips for You",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color.Black
+                        )
+                        
+                        Spacer(modifier = Modifier.height(12.dp))
+                        
+                        // Dynamic tips based on BMI category
+                        val tips = getBMITips(category)
+                        tips.forEach { tip ->
+                            Row(
+                                modifier = Modifier.padding(vertical = 4.dp),
+                                verticalAlignment = Alignment.Top
+                            ) {
+                                Text(
+                                    text = "•",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = Color(0xFF2196F3),
+                                    modifier = Modifier.padding(end = 8.dp, top = 2.dp)
+                                )
+                                Text(
+                                    text = tip,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = Color.Black.copy(alpha = 0.8f),
+                                    lineHeight = 20.sp
+                                )
+                            }
+                        }
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(24.dp))
+                
+                // Close Button
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp)
+                        .clickable { onDismiss() },
+                    shape = RoundedCornerShape(12.dp),
+                    color = Color(0xFF2196F3)
+                ) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "Got it!",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Medium,
+                            color = Color.White
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+private fun getBMITips(category: String): List<String> {
+    return when (category) {
+        "Underweight" -> listOf(
+            "Eat nutrient-rich foods with healthy fats like nuts, avocados, and olive oil",
+            "Include protein-rich foods like lean meats, fish, eggs, and legumes",
+            "Strength training can help build muscle mass",
+            "Eat smaller, more frequent meals throughout the day",
+            "Consider consulting a nutritionist for a personalized meal plan"
+        )
+        "Normal" -> listOf(
+            "Maintain your current healthy weight with balanced nutrition",
+            "Continue regular physical activity (150 minutes per week)",
+            "Eat a variety of fruits, vegetables, whole grains, and lean proteins",
+            "Stay hydrated with 8-10 glasses of water daily",
+            "Get 7-9 hours of quality sleep each night"
+        )
+        "Overweight" -> listOf(
+            "Create a moderate calorie deficit through diet and exercise",
+            "Focus on whole foods and reduce processed food intake",
+            "Increase physical activity gradually to 300+ minutes per week",
+            "Practice portion control and mindful eating",
+            "Consider consulting a healthcare provider for guidance"
+        )
+        "Obese" -> listOf(
+            "Consult with a healthcare provider for a comprehensive weight loss plan",
+            "Start with low-impact exercises like walking or swimming",
+            "Focus on sustainable dietary changes rather than extreme diets",
+            "Consider working with a registered dietitian",
+            "Monitor your progress and celebrate small victories"
+        )
+        else -> listOf(
+            "Maintain a balanced diet with regular physical activity",
+            "Stay hydrated and get adequate sleep",
+            "Consider consulting a healthcare provider for personalized advice"
+        )
     }
 }
