@@ -197,6 +197,7 @@ fun LoginScreen(
                             
                             if (user != null) {
                                 // Login successful
+                                android.util.Log.d("LoginScreen", "Login successful - Email: ${email.trim()}, Remember Me: $rememberMe")
                                 userSession.saveUserSession(email.trim(), rememberMe)
                                 onLoginSuccess()
                             } else {

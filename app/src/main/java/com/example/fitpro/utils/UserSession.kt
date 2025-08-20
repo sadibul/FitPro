@@ -13,26 +13,41 @@ class UserSession(context: Context) {
     }
     
     fun saveUserSession(email: String, rememberMe: Boolean = false) {
+        android.util.Log.d("UserSession", "Saving session - Email: $email, Remember: $rememberMe")
         prefs.edit().apply {
             putString(KEY_CURRENT_USER_EMAIL, email)
             putBoolean(KEY_IS_LOGGED_IN, true)
             putBoolean(KEY_REMEMBER_ME, rememberMe)
             apply()
         }
+        android.util.Log.d("UserSession", "Session saved successfully")
     }
     
     fun getCurrentUserEmail(): String? {
-        return if (isLoggedIn()) {
+        val email = if (isLoggedIn()) {
             prefs.getString(KEY_CURRENT_USER_EMAIL, null)
         } else null
+        android.util.Log.d("UserSession", "Getting current email: $email")
+        return email
     }
     
     fun isLoggedIn(): Boolean {
-        return prefs.getBoolean(KEY_IS_LOGGED_IN, false)
+        val loggedIn = prefs.getBoolean(KEY_IS_LOGGED_IN, false)
+        android.util.Log.d("UserSession", "Is logged in: $loggedIn")
+        return loggedIn
     }
     
     fun shouldRememberUser(): Boolean {
-        return prefs.getBoolean(KEY_REMEMBER_ME, false)
+        val remember = prefs.getBoolean(KEY_REMEMBER_ME, false)
+        android.util.Log.d("UserSession", "Should remember user: $remember")
+        return remember
+    }
+    
+    fun clearSessionIfNotRemembered() {
+        // Clear session only if user didn't choose to be remembered
+        if (!shouldRememberUser() && isLoggedIn()) {
+            logout()
+        }
     }
     
     fun logout() {

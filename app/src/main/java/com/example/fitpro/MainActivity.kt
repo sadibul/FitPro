@@ -113,6 +113,7 @@ fun FitProApp() {
     var isLoading by remember { mutableStateOf(true) }
     var initializationComplete by remember { mutableStateOf(false) }
     var initializationError by remember { mutableStateOf<String?>(null) }
+    var sessionChecked by remember { mutableStateOf(false) }
 
     // Initialize components asynchronously with proper error handling
     LaunchedEffect(Unit) {
@@ -135,6 +136,27 @@ fun FitProApp() {
                 
                 // Update UI on main thread
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    // Check session state during initialization
+                    val userSession = UserSession(context)
+                    val currentEmail = userSession.getCurrentUserEmail()
+                    val shouldRemember = userSession.shouldRememberUser()
+                    val isSessionValid = userSession.isLoggedIn()
+                    
+                    android.util.Log.d("MainActivity", "Initialization - Email: $currentEmail, Remember: $shouldRemember, Valid: $isSessionValid")
+                    
+                    // Set login state during initialization
+                    if (shouldRemember && currentEmail != null && isSessionValid) {
+                        android.util.Log.d("MainActivity", "Auto-login during initialization")
+                        isLoggedIn = true
+                    } else {
+                        android.util.Log.d("MainActivity", "No auto-login during initialization")
+                        isLoggedIn = false
+                        if (isSessionValid && !shouldRemember) {
+                            userSession.logout()
+                        }
+                    }
+                    
+                    sessionChecked = true
                     isLoading = false
                     initializationComplete = true
                     initializationError = null
@@ -155,6 +177,27 @@ fun FitProApp() {
                     stepCounterManager = StepCounterManager(context)
                     
                     kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                        // Check session state during retry initialization
+                        val userSession = UserSession(context)
+                        val currentEmail = userSession.getCurrentUserEmail()
+                        val shouldRemember = userSession.shouldRememberUser()
+                        val isSessionValid = userSession.isLoggedIn()
+                        
+                        android.util.Log.d("MainActivity", "Retry Init - Email: $currentEmail, Remember: $shouldRemember, Valid: $isSessionValid")
+                        
+                        // Set login state during initialization
+                        if (shouldRemember && currentEmail != null && isSessionValid) {
+                            android.util.Log.d("MainActivity", "Auto-login during retry initialization")
+                            isLoggedIn = true
+                        } else {
+                            android.util.Log.d("MainActivity", "No auto-login during retry initialization")
+                            isLoggedIn = false
+                            if (isSessionValid && !shouldRemember) {
+                                userSession.logout()
+                            }
+                        }
+                        
+                        sessionChecked = true
                         isLoading = false
                         initializationComplete = true
                         initializationError = null
@@ -228,31 +271,35 @@ fun FitProApp() {
         
         initializationComplete && userDao != null && workoutPlanDao != null && mealPlanDao != null && completedWorkoutDao != null && completedStepTargetDao != null && stepCounterManager != null -> {
             val userSession = remember { UserSession(context) }
-            var sessionChecked by remember { mutableStateOf(false) }
             var logoutCounter by remember { mutableStateOf(0) }
+            
+            // Check for saved session only once when app starts
+            LaunchedEffect(Unit) {
+                if (!sessionChecked) {
+                    android.util.Log.d("MainActivity", "Starting session check...")
+                    
+                    val currentEmail = userSession.getCurrentUserEmail()
+                    val shouldRemember = userSession.shouldRememberUser()
+                    val isSessionValid = userSession.isLoggedIn()
+                    
+                    android.util.Log.d("MainActivity", "Session data - Email: $currentEmail, Remember: $shouldRemember, Valid: $isSessionValid")
+                    
+                    if (shouldRemember && currentEmail != null && isSessionValid) {
+                        android.util.Log.d("MainActivity", "Auto-login successful")
+                        isLoggedIn = true
+                    } else {
+                        android.util.Log.d("MainActivity", "No auto-login, showing login screen")
+                        isLoggedIn = false
+                    }
+                    
+                    sessionChecked = true
+                }
+            }
             
             // Reset sessionChecked when user logs out to ensure fresh auth flow
             LaunchedEffect(isLoggedIn) {
                 if (!isLoggedIn) {
                     sessionChecked = true // Immediately mark as checked when logged out
-                }
-            }
-            
-            // Check session state on startup with background thread
-            LaunchedEffect(Unit) {
-                if (!sessionChecked) {
-                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                        delay(300) // Brief delay for UI stability
-                        val currentEmail = userSession.getCurrentUserEmail()
-                        val shouldRemember = userSession.shouldRememberUser()
-                        val isSessionValid = userSession.isLoggedIn()
-                        
-                        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                            // Only consider user logged in if session is valid AND should remember
-                            isLoggedIn = currentEmail != null && shouldRemember && isSessionValid
-                            sessionChecked = true
-                        }
-                    }
                 }
             }
             

@@ -248,46 +248,51 @@ private fun WelcomeSection(
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.Top // Changed to align to top
     ) {
         Column {
             Text(
                 text = "Welcome back,",
                 style = MaterialTheme.typography.bodyLarge
             )
-            Text(
-                text = name,
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold
-            )
-        }
-        // Profile Picture
-        Surface(
-            modifier = Modifier
-                .size(50.dp)
-                .clip(RoundedCornerShape(25.dp)),
-            color = MaterialTheme.colorScheme.primary
-        ) {
-            if (profileImageUri != null) {
-                AsyncImage(
-                    model = profileImageUri,
-                    contentDescription = "Profile Picture",
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = name,
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                // Profile Picture aligned with username
+                Surface(
                     modifier = Modifier
-                        .size(50.dp)
-                        .clip(RoundedCornerShape(25.dp)),
-                    contentScale = ContentScale.Crop,
-                    error = painterResource(R.drawable.ic_launcher_foreground), // Fallback on error
-                    onError = { 
-                        android.util.Log.e("HomeScreen", "Failed to load profile image: $profileImageUri")
+                        .size(60.dp) // Increased from 50dp
+                        .clip(RoundedCornerShape(30.dp)),
+                    color = MaterialTheme.colorScheme.primary
+                ) {
+                    if (profileImageUri != null) {
+                        AsyncImage(
+                            model = profileImageUri,
+                            contentDescription = "Profile Picture",
+                            modifier = Modifier
+                                .size(60.dp) // Increased from 50dp
+                                .clip(RoundedCornerShape(30.dp)),
+                            contentScale = ContentScale.Crop,
+                            error = painterResource(R.drawable.ic_launcher_foreground), // Fallback on error
+                            onError = { 
+                                android.util.Log.e("HomeScreen", "Failed to load profile image: $profileImageUri")
+                            }
+                        )
+                    } else {
+                        Icon(
+                            Icons.Default.Person,
+                            contentDescription = "Profile",
+                            modifier = Modifier.padding(10.dp), // Increased padding from 8dp
+                            tint = MaterialTheme.colorScheme.onPrimary
+                        )
                     }
-                )
-            } else {
-                Icon(
-                    Icons.Default.Person,
-                    contentDescription = "Profile",
-                    modifier = Modifier.padding(8.dp),
-                    tint = MaterialTheme.colorScheme.onPrimary
-                )
+                }
             }
         }
     }
@@ -378,7 +383,7 @@ private fun CurrentPlanSection(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "Add Your First Workout Plan",
+                        text = "Add Your Workout Plan",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.primary
@@ -1536,9 +1541,9 @@ private fun StepCounterCard(
                     )
                 }
             } else {
-                // Show "Set your target" message
+                // Show "Set Goal" message
                 Text(
-                    text = "Set your target",
+                    text = "Set Goal",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Medium
@@ -1594,7 +1599,7 @@ private fun StepTargetDialog(
                 Spacer(modifier = Modifier.height(16.dp))
                 
                 Text(
-                    text = if (currentTarget == 0) "Set Step Target" else "Change Step Target",
+                    text = if (currentTarget == 0) "Set Target" else "Change Target",
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
@@ -1987,7 +1992,7 @@ private fun ModernCurrentPlanSection(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "Add Your First Workout Plan",
+                        text = "Add Your Workout Plan",
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Medium,
                         color = Color(0xFF4A90E2),
@@ -2253,7 +2258,7 @@ private fun ModernStepCounterCard(
                     text = "Done",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF4CAF50) // Green color for completed
+                    color = Color(0xFF2196F3) // Same blue color as Steps
                 )
             } else {
                 Text(
@@ -2281,18 +2286,14 @@ private fun ModernStepCounterCard(
                         "${minOf(steps, stepTarget)}/$stepTarget"
                     },
                     style = MaterialTheme.typography.bodySmall,
-                    color = if (isTargetCompleted && steps >= stepTarget) {
-                        Color(0xFF4CAF50) // Green when completed
-                    } else {
-                        Color(0xFF2196F3)
-                    },
+                    color = Color(0xFF2196F3), // Same blue color for all states
                     textAlign = TextAlign.Center,
                     fontWeight = FontWeight.Medium
                 )
             } else {
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "Set your\ntarget",
+                    text = "Set Goal",
                     style = MaterialTheme.typography.bodySmall,
                     color = Color(0xFF2196F3),
                     textAlign = TextAlign.Center,
