@@ -51,6 +51,7 @@ import com.example.fitpro.utils.StepCounterManager
 import com.example.fitpro.utils.UserSession
 
 sealed class Screen(val route: String) {
+    object Auth : Screen("auth")
     object Login : Screen("login")
     object SignUp : Screen("signup")
     object Questions : Screen("questions/{name}/{email}/{password}") {
@@ -382,18 +383,26 @@ fun AuthNavigation(
     userSession: UserSession,
     onLoginSuccess: () -> Unit
 ) {
-    // Ensure we always start fresh at login when this composable is created
+    // Ensure we always start fresh at auth when this composable is created
     LaunchedEffect(Unit) {
-        navController.navigate(Screen.Login.route) {
+        navController.navigate(Screen.Auth.route) {
             popUpTo(0) { inclusive = true }
         }
     }
     
     NavHost(
         navController = navController,
-        startDestination = Screen.Login.route,
+        startDestination = Screen.Auth.route,
         modifier = Modifier
     ) {
+        composable(Screen.Auth.route) {
+            AuthScreen(
+                navController = navController,
+                userSession = userSession,
+                userDao = userDao,
+                onLoginSuccess = onLoginSuccess
+            )
+        }
         composable(Screen.Login.route) {
             LoginScreen(
                 navController = navController,
