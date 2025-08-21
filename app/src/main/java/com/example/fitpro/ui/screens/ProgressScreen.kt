@@ -1,6 +1,7 @@
 package com.example.fitpro.ui.screens
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -67,22 +68,42 @@ fun ProgressScreen(
         mealPlanDao.getAllMealPlans(it).collectAsStateWithLifecycle(initialValue = emptyList())
     } ?: flowOf(emptyList<MealPlan>()).collectAsStateWithLifecycle(initialValue = emptyList()))
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { 
-                    Text(
-                        "Progress",
-                        fontWeight = FontWeight.Bold
-                    ) 
-                }
+    Column(
+        modifier = Modifier.fillMaxSize()
+    ) {
+        // Custom header with background
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .shadow(
+                    elevation = 8.dp,
+                    shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp),
+                    clip = false
+                )
+                .background(
+                    color = Color.White,
+                    shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp)
+                )
+                .padding(
+                    start = 16.dp,
+                    end = 16.dp,
+                    top = 16.dp,
+                    bottom = 20.dp
+                )
+        ) {
+            Text(
+                text = "Progress",
+                fontSize = 28.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF1F2937),
+                modifier = Modifier.align(Alignment.CenterStart)
             )
         }
-    ) { padding ->
+
+        // Content area
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
@@ -168,6 +189,7 @@ fun ProgressScreen(
         }
     }
 }
+
 
 @Composable
 private fun WeeklyOverviewCard(caloriesBurned: Int, weeklyCalories: Int) {

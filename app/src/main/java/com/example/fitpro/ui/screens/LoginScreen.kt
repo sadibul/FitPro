@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -181,8 +182,8 @@ fun LoginScreen(
             }
         }
 
-        // Login Button with Gradient
-        Button(
+        // Login Button with Gradient Border
+        OutlinedButton(
             onClick = { 
                 coroutineScope.launch {
                     if (email.isNotBlank() && password.isNotBlank()) {
@@ -226,30 +227,31 @@ fun LoginScreen(
             enabled = email.isNotBlank() && password.isNotBlank() && !isLoading,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(56.dp)
-                .background(
-                    brush = Brush.horizontalGradient(
-                        colors = listOf(
-                            Color(0xFF6366F1),
-                            Color(0xFF8B5CF6)
-                        )
-                    ),
-                    shape = RoundedCornerShape(16.dp)
-                ),
-            shape = RoundedCornerShape(16.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = Color.Transparent
+                .height(56.dp),
+            shape = RoundedCornerShape(28.dp),
+            border = androidx.compose.foundation.BorderStroke(
+                width = 2.dp,
+                brush = Brush.horizontalGradient(
+                    colors = listOf(
+                        Color(0xFF3B82F6), // Bright blue
+                        Color(0xFF60A5FA)  // Light sky blue
+                    )
+                )
+            ),
+            colors = ButtonDefaults.outlinedButtonColors(
+                containerColor = Color.White,
+                contentColor = Color(0xFF3B82F6)
             )
         ) {
             if (isLoading) {
                 CircularProgressIndicator(
                     modifier = Modifier.size(20.dp),
-                    color = Color.White
+                    color = Color(0xFF3B82F6)
                 )
             } else {
                 Text(
                     text = "Login",
-                    color = Color.White,
+                    color = Color(0xFF3B82F6),
                     fontSize = 16.sp,
                     fontWeight = FontWeight.SemiBold
                 )
@@ -310,10 +312,10 @@ fun LoginScreen(
                 )
             ) {
                 Icon(
-                    Icons.Default.AccountCircle,
+                    painter = painterResource(id = com.example.fitpro.R.drawable.google),
                     contentDescription = "Google",
                     modifier = Modifier.size(20.dp),
-                    tint = Color(0xFF6B7280)
+                    tint = Color.Unspecified
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
@@ -335,10 +337,10 @@ fun LoginScreen(
                 )
             ) {
                 Icon(
-                    Icons.Default.Smartphone,
+                    painter = painterResource(id = com.example.fitpro.R.drawable.apple),
                     contentDescription = "Apple",
                     modifier = Modifier.size(20.dp),
-                    tint = Color(0xFF6B7280)
+                    tint = Color.Unspecified
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(

@@ -11,6 +11,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -198,8 +199,8 @@ fun SignUpScreen(
             }
         }
 
-        // Sign Up Button with Gradient
-        Button(
+        // Sign Up Button with Gradient Border
+        OutlinedButton(
             onClick = { 
                 coroutineScope.launch {
                     if (name.isNotEmpty() && email.isNotEmpty() && password.isNotEmpty() && confirmPassword.isNotEmpty()) {
@@ -243,34 +244,59 @@ fun SignUpScreen(
                      password.isNotEmpty() && confirmPassword.isNotEmpty() && !isLoading,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(56.dp)
-                .background(
-                    brush = Brush.horizontalGradient(
-                        colors = listOf(
-                            Color(0xFF6366F1),
-                            Color(0xFF8B5CF6)
-                        )
-                    ),
-                    shape = RoundedCornerShape(16.dp)
-                ),
-            shape = RoundedCornerShape(16.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = Color.Transparent
+                .height(56.dp),
+            shape = RoundedCornerShape(28.dp),
+            border = androidx.compose.foundation.BorderStroke(
+                width = 2.dp,
+                brush = Brush.horizontalGradient(
+                    colors = listOf(
+                        Color(0xFF3B82F6), // Bright blue
+                        Color(0xFF60A5FA)  // Light sky blue
+                    )
+                )
+            ),
+            colors = ButtonDefaults.outlinedButtonColors(
+                containerColor = Color.White,
+                contentColor = Color(0xFF3B82F6)
             )
         ) {
             if (isLoading) {
                 CircularProgressIndicator(
                     modifier = Modifier.size(20.dp),
-                    color = Color.White
+                    color = Color(0xFF3B82F6)
                 )
             } else {
                 Text(
                     text = "Sign Up",
-                    color = Color.White,
+                    color = Color(0xFF3B82F6),
                     fontSize = 16.sp,
                     fontWeight = FontWeight.SemiBold
                 )
             }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // OR Divider
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            HorizontalDivider(
+                modifier = Modifier.weight(1f),
+                color = Color(0xFFE5E7EB)
+            )
+            Text(
+                text = "  OR  ",
+                fontSize = 14.sp,
+                color = Color(0xFF6B7280)
+            )
+            HorizontalDivider(
+                modifier = Modifier.weight(1f),
+                color = Color(0xFFE5E7EB)
+            )
         }
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -288,55 +314,57 @@ fun SignUpScreen(
             )
         }
 
-        // Social signup buttons
+        // Social login buttons
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Button(
+            OutlinedButton(
                 onClick = { /* TODO: Implement Google signup */ },
                 modifier = Modifier
                     .weight(1f)
                     .height(56.dp),
                 shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF4285F4)
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE5E7EB)),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    containerColor = Color.White
                 )
             ) {
                 Icon(
-                    Icons.Default.AccountCircle,
+                    painter = painterResource(id = com.example.fitpro.R.drawable.google),
                     contentDescription = "Google",
                     modifier = Modifier.size(20.dp),
-                    tint = Color.White
+                    tint = Color.Unspecified
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     "Google",
-                    color = Color.White,
+                    color = Color(0xFF374151),
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Medium
                 )
             }
-            Button(
+            OutlinedButton(
                 onClick = { /* TODO: Implement Apple signup */ },
                 modifier = Modifier
                     .weight(1f)
                     .height(56.dp),
                 shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF007AFF)
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE5E7EB)),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    containerColor = Color.White
                 )
             ) {
                 Icon(
-                    Icons.Default.Smartphone,
+                    painter = painterResource(id = com.example.fitpro.R.drawable.apple),
                     contentDescription = "Apple",
                     modifier = Modifier.size(20.dp),
-                    tint = Color.White
+                    tint = Color.Unspecified
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     "Apple",
-                    color = Color.White,
+                    color = Color(0xFF374151),
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Medium
                 )

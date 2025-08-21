@@ -31,6 +31,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
@@ -122,62 +123,63 @@ fun AccountScreen(
         }
     }
     
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { 
-                    Text(
-                        "Account", 
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.Black
-                    ) 
-                },
-                navigationIcon = {
-                    Surface(
-                        modifier = Modifier
-                            .size(40.dp)
-                            .padding(4.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        color = Color.Black.copy(alpha = 0.05f)
-                    ) {
-                        IconButton(onClick = { navController.navigateUp() }) {
-                            Icon(
-                                Icons.Default.ArrowBack, 
-                                "Back",
-                                tint = Color.Black.copy(alpha = 0.7f)
-                            )
-                        }
-                    }
-                },
-                actions = {
-                    Surface(
-                        modifier = Modifier
-                            .size(40.dp)
-                            .padding(4.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        color = Color.Black.copy(alpha = 0.05f)
-                    ) {
-                        IconButton(onClick = { /* Settings action */ }) {
-                            Icon(
-                                Icons.Default.Settings, 
-                                "Settings",
-                                tint = Color.Black.copy(alpha = 0.7f)
-                            )
-                        }
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.White
+    Column(
+        modifier = Modifier.fillMaxSize()
+    ) {
+        // Custom header with background
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .shadow(
+                    elevation = 8.dp,
+                    shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp),
+                    clip = false
                 )
-            )
-        },
-        containerColor = Color(0xFFF8F9FA)
-    ) { paddingValues ->
+                .background(
+                    color = Color.White,
+                    shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp)
+                )
+                .padding(
+                    start = 16.dp,
+                    end = 16.dp,
+                    top = 16.dp,
+                    bottom = 20.dp
+                )
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Account",
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF1F2937)
+                )
+                
+                Surface(
+                    modifier = Modifier
+                        .size(40.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    color = Color.Black.copy(alpha = 0.05f)
+                ) {
+                    IconButton(onClick = { /* Settings action */ }) {
+                        Icon(
+                            Icons.Default.Settings, 
+                            "Settings",
+                            tint = Color.Black.copy(alpha = 0.7f)
+                        )
+                    }
+                }
+            }
+        }
+
+        // Content area
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
+                .background(Color(0xFFF8F9FA))
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -290,6 +292,7 @@ fun AccountScreen(
         )
     }
 }
+
 
 @Composable
 private fun ProfileImageSection(
