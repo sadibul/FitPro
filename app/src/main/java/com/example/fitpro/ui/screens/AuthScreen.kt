@@ -22,6 +22,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
@@ -78,9 +79,18 @@ fun AuthScreen(
         // App Title
         Text(
             text = "FitPro",
-            fontSize = 32.sp,
-            fontWeight = FontWeight.Bold,
-            color = Color(0xFF6366F1),
+            style = TextStyle(
+                fontSize = 32.sp,
+                fontWeight = FontWeight.Bold,
+                brush = Brush.linearGradient(
+                    colors = listOf(
+                        Color(0xFF5DADE2), // Light blue (top)
+                        Color(0xFF3498DB), // Medium blue
+                        Color(0xFF2980B9), // Darker blue
+                        Color(0xFF1F4E79)  // Deep blue (bottom)
+                    )
+                )
+            ),
             modifier = Modifier.padding(bottom = 8.dp)
         )
         

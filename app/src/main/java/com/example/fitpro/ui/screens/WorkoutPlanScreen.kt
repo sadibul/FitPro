@@ -231,7 +231,7 @@ private fun WorkoutCategoryCard(
             Row(
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Icon with Lottie animations for specific categories
+                // Icon with Lottie animations
                 when (category.icon) {
                     "yoga" -> {
                         val composition by rememberLottieComposition(
@@ -250,7 +250,7 @@ private fun WorkoutCategoryCard(
                     }
                     "strength" -> {
                         val composition by rememberLottieComposition(
-                            LottieCompositionSpec.Url("https://lottie.host/9d6ae8ae-0a3c-4680-a59c-b216f95face9/q1FM93ckNT.json")
+                            LottieCompositionSpec.Url("https://lottie.host/6364dc73-4be1-4ac0-b98f-5a186d199a02/x1pTSzDZ7U.json")
                         )
                         Box(
                             modifier = Modifier.size(80.dp),
@@ -265,7 +265,7 @@ private fun WorkoutCategoryCard(
                     }
                     "cardio" -> {
                         val composition by rememberLottieComposition(
-                            LottieCompositionSpec.Url("https://lottie.host/59aaf881-8838-49f9-84f3-8e4db6a5e8b0/eHFRsVCJMc.json")
+                            LottieCompositionSpec.Url("https://lottie.host/e5be8fd0-739f-4eb5-9a25-986f7356f83a/V84mamzfxE.json")
                         )
                         Box(
                             modifier = Modifier.size(80.dp),
@@ -280,7 +280,7 @@ private fun WorkoutCategoryCard(
                     }
                     "pilates" -> {
                         val composition by rememberLottieComposition(
-                            LottieCompositionSpec.Url("https://lottie.host/59a138b6-5b16-485b-b177-02ce2b80dab0/GCOsAH2pzj.json")
+                            LottieCompositionSpec.Url("https://lottie.host/b25a7f0a-8e6c-4966-835b-ab718b3fd1a9/vv6wHnfc6p.json")
                         )
                         Box(
                             modifier = Modifier.size(80.dp),
@@ -296,6 +296,171 @@ private fun WorkoutCategoryCard(
                     "hiit" -> {
                         val composition by rememberLottieComposition(
                             LottieCompositionSpec.Url("https://lottie.host/846fe7db-2ac3-41e4-85a5-5708385b288b/W8U1nN7RwR.json")
+                        )
+                        Box(
+                            modifier = Modifier.size(80.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            LottieAnimation(
+                                composition = composition,
+                                modifier = Modifier.size(75.dp),
+                                iterations = LottieConstants.IterateForever
+                            )
+                        }
+                    }
+                    "dance" -> {
+                        val composition by rememberLottieComposition(
+                            LottieCompositionSpec.Url("https://lottie.host/e3e2ec37-7891-4e11-8d12-6537bc11b718/ST4HNmu7HJ.json")
+                        )
+                        Box(
+                            modifier = Modifier.size(80.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            LottieAnimation(
+                                composition = composition,
+                                modifier = Modifier.size(75.dp),
+                                iterations = LottieConstants.IterateForever
+                            )
+                        }
+                    }
+                    "stretching" -> {
+                        val composition by rememberLottieComposition(
+                            LottieCompositionSpec.Url("https://lottie.host/c7372ce0-f66a-435f-9402-7e43908cfc09/7RFQoCJGrM.json")
+                        )
+                        Box(
+                            modifier = Modifier.size(80.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            LottieAnimation(
+                                composition = composition,
+                                modifier = Modifier.size(75.dp),
+                                iterations = LottieConstants.IterateForever
+                            )
+                        }
+                    }
+                    "flexibility" -> {
+                        val composition by rememberLottieComposition(
+                            LottieCompositionSpec.Url("https://lottie.host/290dd502-cd36-4fb9-8bae-938f74c77a06/4r6kv7ep4p.json")
+                        )
+                        Box(
+                            modifier = Modifier.size(80.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            LottieAnimation(
+                                composition = composition,
+                                modifier = Modifier.size(75.dp),
+                                iterations = LottieConstants.IterateForever
+                            )
+                        }
+                    }
+                    "crossfit" -> {
+                        val composition by rememberLottieComposition(
+                            LottieCompositionSpec.Url("https://lottie.host/2ee88b3f-e5db-4556-ba21-2bc5a34f8711/CsDSH5Otam.json")
+                        )
+                        Box(
+                            modifier = Modifier.size(80.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            LottieAnimation(
+                                composition = composition,
+                                modifier = Modifier.size(75.dp),
+                                iterations = LottieConstants.IterateForever
+                            )
+                        }
+                    }
+                    "swimming" -> {
+                        val composition by rememberLottieComposition(
+                            LottieCompositionSpec.Url("https://lottie.host/f06576bd-9931-4d7b-a299-4253ee804c09/NAeqOGGyTv.json")
+                        )
+                        Box(
+                            modifier = Modifier.size(80.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            LottieAnimation(
+                                composition = composition,
+                                modifier = Modifier.size(75.dp),
+                                iterations = LottieConstants.IterateForever
+                            )
+                        }
+                    }
+                    "cycling" -> {
+                        val composition by rememberLottieComposition(
+                            LottieCompositionSpec.Url("https://lottie.host/437183ec-942c-401e-9ec5-583548499fb9/wyaucBCqvB.json")
+                        )
+                        Box(
+                            modifier = Modifier.size(80.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            LottieAnimation(
+                                composition = composition,
+                                modifier = Modifier.size(75.dp),
+                                iterations = LottieConstants.IterateForever
+                            )
+                        }
+                    }
+                    "walking" -> {
+                        val composition by rememberLottieComposition(
+                            LottieCompositionSpec.Url("https://lottie.host/e63944ef-85ff-4cbb-998e-16752ceceb4b/qm4wKOMhjf.json")
+                        )
+                        Box(
+                            modifier = Modifier.size(80.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            LottieAnimation(
+                                composition = composition,
+                                modifier = Modifier.size(75.dp),
+                                iterations = LottieConstants.IterateForever
+                            )
+                        }
+                    }
+                    "rowing" -> {
+                        val composition by rememberLottieComposition(
+                            LottieCompositionSpec.Url("https://lottie.host/85e73f2d-27d4-4715-9140-eccaf2fe7343/BaBSYX46mF.json")
+                        )
+                        Box(
+                            modifier = Modifier.size(80.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            LottieAnimation(
+                                composition = composition,
+                                modifier = Modifier.size(75.dp),
+                                iterations = LottieConstants.IterateForever
+                            )
+                        }
+                    }
+                    "boxing" -> {
+                        val composition by rememberLottieComposition(
+                            LottieCompositionSpec.Url("https://lottie.host/b3473b9e-e5fb-4a7e-95ff-51bea33ef2ff/beoFw7J0vk.json")
+                        )
+                        Box(
+                            modifier = Modifier.size(80.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            LottieAnimation(
+                                composition = composition,
+                                modifier = Modifier.size(75.dp),
+                                iterations = LottieConstants.IterateForever
+                            )
+                        }
+                    }
+                    "bodyweight" -> {
+                        val composition by rememberLottieComposition(
+                            LottieCompositionSpec.Url("https://lottie.host/98c378f6-c409-4906-a239-ac20d67cd167/h6TgUk21qM.json")
+                        )
+                        Box(
+                            modifier = Modifier.size(80.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            LottieAnimation(
+                                composition = composition,
+                                modifier = Modifier.size(75.dp),
+                                iterations = LottieConstants.IterateForever
+                            )
+                        }
+                    }
+                    "hiking" -> {
+                        val composition by rememberLottieComposition(
+                            LottieCompositionSpec.Url("https://lottie.host/fad71458-e9ac-4891-aace-61e26f6ac688/69Ah7abnKA.json")
                         )
                         Box(
                             modifier = Modifier.size(80.dp),
@@ -386,7 +551,7 @@ private fun WorkoutCustomizationModal(
                     Spacer(modifier = Modifier.size(36.dp))
                     
                     // Category Icon - Centered with Lottie animations
-                    when (category.name.lowercase()) {
+                    when (category.icon) {
                         "yoga" -> {
                             val composition by rememberLottieComposition(
                                 LottieCompositionSpec.Url("https://lottie.host/8a94f41b-0060-4f88-af59-92984f36e019/TxNI1tNdFj.json")
@@ -402,9 +567,9 @@ private fun WorkoutCustomizationModal(
                                 )
                             }
                         }
-                        "strength training" -> {
+                        "strength" -> {
                             val composition by rememberLottieComposition(
-                                LottieCompositionSpec.Url("https://lottie.host/9d6ae8ae-0a3c-4680-a59c-b216f95face9/q1FM93ckNT.json")
+                                LottieCompositionSpec.Url("https://lottie.host/6364dc73-4be1-4ac0-b98f-5a186d199a02/x1pTSzDZ7U.json")
                             )
                             Box(
                                 modifier = Modifier.size(90.dp),
@@ -419,7 +584,7 @@ private fun WorkoutCustomizationModal(
                         }
                         "cardio" -> {
                             val composition by rememberLottieComposition(
-                                LottieCompositionSpec.Url("https://lottie.host/59aaf881-8838-49f9-84f3-8e4db6a5e8b0/eHFRsVCJMc.json")
+                                LottieCompositionSpec.Url("https://lottie.host/e5be8fd0-739f-4eb5-9a25-986f7356f83a/V84mamzfxE.json")
                             )
                             Box(
                                 modifier = Modifier.size(90.dp),
@@ -434,7 +599,7 @@ private fun WorkoutCustomizationModal(
                         }
                         "pilates" -> {
                             val composition by rememberLottieComposition(
-                                LottieCompositionSpec.Url("https://lottie.host/59a138b6-5b16-485b-b177-02ce2b80dab0/GCOsAH2pzj.json")
+                                LottieCompositionSpec.Url("https://lottie.host/b25a7f0a-8e6c-4966-835b-ab718b3fd1a9/vv6wHnfc6p.json")
                             )
                             Box(
                                 modifier = Modifier.size(90.dp),
@@ -462,27 +627,186 @@ private fun WorkoutCustomizationModal(
                                 )
                             }
                         }
+                        "dance" -> {
+                            val composition by rememberLottieComposition(
+                                LottieCompositionSpec.Url("https://lottie.host/e3e2ec37-7891-4e11-8d12-6537bc11b718/ST4HNmu7HJ.json")
+                            )
+                            Box(
+                                modifier = Modifier.size(90.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                LottieAnimation(
+                                    composition = composition,
+                                    modifier = Modifier.size(85.dp),
+                                    iterations = LottieConstants.IterateForever
+                                )
+                            }
+                        }
+                        "stretching" -> {
+                            val composition by rememberLottieComposition(
+                                LottieCompositionSpec.Url("https://lottie.host/c7372ce0-f66a-435f-9402-7e43908cfc09/7RFQoCJGrM.json")
+                            )
+                            Box(
+                                modifier = Modifier.size(90.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                LottieAnimation(
+                                    composition = composition,
+                                    modifier = Modifier.size(85.dp),
+                                    iterations = LottieConstants.IterateForever
+                                )
+                            }
+                        }
+                        "flexibility" -> {
+                            val composition by rememberLottieComposition(
+                                LottieCompositionSpec.Url("https://lottie.host/290dd502-cd36-4fb9-8bae-938f74c77a06/4r6kv7ep4p.json")
+                            )
+                            Box(
+                                modifier = Modifier.size(90.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                LottieAnimation(
+                                    composition = composition,
+                                    modifier = Modifier.size(85.dp),
+                                    iterations = LottieConstants.IterateForever
+                                )
+                            }
+                        }
+                        "crossfit" -> {
+                            val composition by rememberLottieComposition(
+                                LottieCompositionSpec.Url("https://lottie.host/2ee88b3f-e5db-4556-ba21-2bc5a34f8711/CsDSH5Otam.json")
+                            )
+                            Box(
+                                modifier = Modifier.size(90.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                LottieAnimation(
+                                    composition = composition,
+                                    modifier = Modifier.size(85.dp),
+                                    iterations = LottieConstants.IterateForever
+                                )
+                            }
+                        }
+                        "swimming" -> {
+                            val composition by rememberLottieComposition(
+                                LottieCompositionSpec.Url("https://lottie.host/f06576bd-9931-4d7b-a299-4253ee804c09/NAeqOGGyTv.json")
+                            )
+                            Box(
+                                modifier = Modifier.size(90.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                LottieAnimation(
+                                    composition = composition,
+                                    modifier = Modifier.size(85.dp),
+                                    iterations = LottieConstants.IterateForever
+                                )
+                            }
+                        }
+                        "cycling" -> {
+                            val composition by rememberLottieComposition(
+                                LottieCompositionSpec.Url("https://lottie.host/437183ec-942c-401e-9ec5-583548499fb9/wyaucBCqvB.json")
+                            )
+                            Box(
+                                modifier = Modifier.size(90.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                LottieAnimation(
+                                    composition = composition,
+                                    modifier = Modifier.size(85.dp),
+                                    iterations = LottieConstants.IterateForever
+                                )
+                            }
+                        }
+                        "walking" -> {
+                            val composition by rememberLottieComposition(
+                                LottieCompositionSpec.Url("https://lottie.host/e63944ef-85ff-4cbb-998e-16752ceceb4b/qm4wKOMhjf.json")
+                            )
+                            Box(
+                                modifier = Modifier.size(90.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                LottieAnimation(
+                                    composition = composition,
+                                    modifier = Modifier.size(85.dp),
+                                    iterations = LottieConstants.IterateForever
+                                )
+                            }
+                        }
+                        "rowing" -> {
+                            val composition by rememberLottieComposition(
+                                LottieCompositionSpec.Url("https://lottie.host/85e73f2d-27d4-4715-9140-eccaf2fe7343/BaBSYX46mF.json")
+                            )
+                            Box(
+                                modifier = Modifier.size(90.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                LottieAnimation(
+                                    composition = composition,
+                                    modifier = Modifier.size(85.dp),
+                                    iterations = LottieConstants.IterateForever
+                                )
+                            }
+                        }
+                        "boxing" -> {
+                            val composition by rememberLottieComposition(
+                                LottieCompositionSpec.Url("https://lottie.host/b3473b9e-e5fb-4a7e-95ff-51bea33ef2ff/beoFw7J0vk.json")
+                            )
+                            Box(
+                                modifier = Modifier.size(90.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                LottieAnimation(
+                                    composition = composition,
+                                    modifier = Modifier.size(85.dp),
+                                    iterations = LottieConstants.IterateForever
+                                )
+                            }
+                        }
+                        "bodyweight" -> {
+                            val composition by rememberLottieComposition(
+                                LottieCompositionSpec.Url("https://lottie.host/98c378f6-c409-4906-a239-ac20d67cd167/h6TgUk21qM.json")
+                            )
+                            Box(
+                                modifier = Modifier.size(90.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                LottieAnimation(
+                                    composition = composition,
+                                    modifier = Modifier.size(85.dp),
+                                    iterations = LottieConstants.IterateForever
+                                )
+                            }
+                        }
+                        "hiking" -> {
+                            val composition by rememberLottieComposition(
+                                LottieCompositionSpec.Url("https://lottie.host/fad71458-e9ac-4891-aace-61e26f6ac688/69Ah7abnKA.json")
+                            )
+                            Box(
+                                modifier = Modifier.size(90.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                LottieAnimation(
+                                    composition = composition,
+                                    modifier = Modifier.size(85.dp),
+                                    iterations = LottieConstants.IterateForever
+                                )
+                            }
+                        }
                         else -> {
                             Surface(
                                 modifier = Modifier.size(56.dp),
                                 shape = RoundedCornerShape(18.dp),
-                                color = getCategoryColor(category.name).copy(alpha = 0.15f)
+                                color = getCategoryColor(category.icon).copy(alpha = 0.15f)
                             ) {
                                 Box(
                                     modifier = Modifier.fillMaxSize(),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(
-                                        imageVector = when (category.name.lowercase()) {
-                                            "strength", "strength training" -> Icons.Default.FitnessCenter
-                                            "cardio", "running" -> Icons.Default.DirectionsRun
-                                            "cycling" -> Icons.Default.DirectionsBike
-                                            "walking", "hiking" -> Icons.Default.DirectionsWalk
-                                            else -> Icons.Default.SportsGymnastics
-                                        },
+                                        imageVector = getCategoryIcon(category.icon),
                                         contentDescription = null,
                                         modifier = Modifier.size(28.dp),
-                                        tint = getCategoryColor(category.name)
+                                        tint = getCategoryColor(category.icon)
                                     )
                                 }
                             }
