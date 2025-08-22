@@ -119,6 +119,9 @@ dependencies {
     // Image loading
     implementation("io.coil-kt:coil-compose:2.6.0")
 
+    // Lottie animations
+    implementation("com.airbnb.android:lottie-compose:6.1.0")
+
     // Splash Screen API
     implementation("androidx.core:core-splashscreen:1.0.1")
 

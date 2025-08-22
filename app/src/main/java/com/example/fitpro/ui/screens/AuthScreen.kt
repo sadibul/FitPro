@@ -213,22 +213,15 @@ fun AuthScreen(
                                         if (userExists) {
                                             signupErrorMessage = "An account with this email already exists."
                                         } else {
-                                            val userProfile = UserProfile(
-                                                name = signupName.trim(),
-                                                email = signupEmail.trim(),
-                                                password = signupPassword,
-                                                age = 0,
-                                                weight = 0f,
-                                                height = 0,
-                                                gender = ""
+                                            // Don't insert the user yet - let QuestionsScreen handle the complete user creation
+                                            // Navigate to Questions screen to collect user details
+                                            navController.navigate(
+                                                Screen.Questions.createRoute(
+                                                    signupName.trim(),
+                                                    signupEmail.trim(),
+                                                    signupPassword
+                                                )
                                             )
-                                            
-                                            withContext(Dispatchers.IO) {
-                                                userDao.insertUser(userProfile)
-                                            }
-                                            
-                                            userSession.saveUserSession(signupEmail.trim(), false)
-                                            onLoginSuccess()
                                         }
                                     } catch (e: Exception) {
                                         signupErrorMessage = "Sign up failed. Please try again."
