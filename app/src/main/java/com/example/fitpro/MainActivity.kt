@@ -505,8 +505,8 @@ fun MainAppWithBottomNav(
                     .background(
                         brush = Brush.horizontalGradient(
                             colors = listOf(
-                                Color(0xFF2563EB), // Deep blue
-                                Color(0xFF1E40AF)  // Dark navy blue
+                                Color(0xFF87CEEB), // Sky blue
+                                Color(0xFF1E90FF)  // Dodger blue
                             )
                         )
                     )

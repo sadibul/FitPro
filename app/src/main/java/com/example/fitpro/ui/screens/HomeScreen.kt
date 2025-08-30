@@ -2719,7 +2719,7 @@ private fun WelcomeSection(
                             modifier = Modifier.padding(16.dp)
                         ) {
                             Text(
-                                text = "💡 Health Tips for You",
+                                text = "💡 Health Tips",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.SemiBold,
                                 color = Color.Black
@@ -2736,15 +2736,15 @@ private fun WelcomeSection(
                                 ) {
                                     Text(
                                         text = "•",
-                                        style = MaterialTheme.typography.bodyMedium,
+                                        style = MaterialTheme.typography.bodySmall,
                                         color = Color(0xFF2196F3),
                                         modifier = Modifier.padding(end = 8.dp, top = 2.dp)
                                     )
                                     Text(
                                         text = tip,
-                                        style = MaterialTheme.typography.bodyMedium,
+                                        style = MaterialTheme.typography.bodySmall,
                                         color = Color.Black.copy(alpha = 0.8f),
-                                        lineHeight = 20.sp
+                                        lineHeight = 18.sp
                                     )
                                 }
                             }

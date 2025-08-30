@@ -298,9 +298,14 @@ fun MealPlanScreen(
                             onClick = {
                                 showOverwriteDialog = false
                             },
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(48.dp)
                         ) {
-                            Text("Cancel")
+                            Text(
+                                text = "Cancel",
+                                textAlign = TextAlign.Center
+                            )
                         }
                         
                         Button(
@@ -331,12 +336,17 @@ fun MealPlanScreen(
                                     }
                                 }
                             },
-                            modifier = Modifier.weight(1f),
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(48.dp),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = MaterialTheme.colorScheme.error
                             )
                         ) {
-                            Text("Replace")
+                            Text(
+                                text = "Replace",
+                                textAlign = TextAlign.Center
+                            )
                         }
                     }
                 }
