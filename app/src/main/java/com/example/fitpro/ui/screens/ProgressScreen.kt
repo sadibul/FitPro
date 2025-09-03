@@ -813,27 +813,28 @@ private fun SandowScoreChart(
             Row(
                 modifier = Modifier.fillMaxWidth()
             ) {
-                // Y-axis labels (only show for Weekly view)
-                if (currentPeriod == "Weekly") {
-                    Column(
-                        modifier = Modifier
-                            .width(40.dp)
-                            .height(200.dp)
-                            .padding(vertical = 8.dp), // Match chart padding
-                        verticalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        yAxisLabels.reversed().forEach { label ->
-                            Text(
-                                text = label,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = Color.Gray,
-                                modifier = Modifier.wrapContentHeight()
-                            )
-                        }
-                    }
+                // Y-axis labels (show for both Weekly and Yearly view)
+                Column(
+                    modifier = Modifier
+                        .width(40.dp)
+                        .height(200.dp)
+                        .padding(vertical = 8.dp), // Match chart padding
+                    verticalArrangement = Arrangement.SpaceBetween
+                ) {
+                    // Use the same Y-axis labels for both Weekly and Yearly views
+                    val displayLabels = yAxisLabels.reversed()
                     
-                    Spacer(modifier = Modifier.width(16.dp))
+                    displayLabels.forEach { label ->
+                        Text(
+                            text = label,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.Gray,
+                            modifier = Modifier.wrapContentHeight()
+                        )
+                    }
                 }
+                
+                Spacer(modifier = Modifier.width(16.dp))
                 
                 // Chart area
                 Column(
@@ -845,27 +846,25 @@ private fun SandowScoreChart(
                             .fillMaxWidth()
                             .height(200.dp)
                     ) {
-                        // Grid lines (only for Weekly view)
-                        if (currentPeriod == "Weekly") {
-                            Canvas(
-                                modifier = Modifier.fillMaxSize()
-                            ) {
-                                val gridColor = Color.LightGray.copy(alpha = 0.3f)
-                                val gridLines = yAxisLabels.size
-                                val chartHeight = size.height - 16.dp.toPx() // Account for vertical padding
-                                val chartTop = 8.dp.toPx() // Top padding
-                                
-                                // Draw horizontal grid lines aligned with Y-axis labels
-                                for (i in 0 until gridLines) {
-                                    // Calculate Y position from bottom to top
-                                    val y = chartTop + chartHeight - (i.toFloat() / (gridLines - 1) * chartHeight)
-                                    drawLine(
-                                        color = gridColor,
-                                        start = Offset(0f, y),
-                                        end = Offset(size.width, y),
-                                        strokeWidth = 1.dp.toPx()
-                                    )
-                                }
+                        // Grid lines (show for both Weekly and Yearly view)
+                        Canvas(
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            val gridColor = Color.LightGray.copy(alpha = 0.3f)
+                            val gridLines = 5 // Always use 5 grid lines for consistency
+                            val chartHeight = size.height - 16.dp.toPx() // Account for vertical padding
+                            val chartTop = 8.dp.toPx() // Top padding
+                            
+                            // Draw horizontal grid lines aligned with Y-axis labels
+                            for (i in 0 until gridLines) {
+                                // Calculate Y position from bottom to top
+                                val y = chartTop + chartHeight - (i.toFloat() / (gridLines - 1) * chartHeight)
+                                drawLine(
+                                    color = gridColor,
+                                    start = Offset(0f, y),
+                                    end = Offset(size.width, y),
+                                    strokeWidth = 1.dp.toPx()
+                                )
                             }
                         }
                         
@@ -884,14 +883,8 @@ private fun SandowScoreChart(
                                 listOf("J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D")
                             }
                             
-                            // Use the maxValue parameter which represents the top Y-axis value for Weekly
-                            // For Yearly, use the max value from data for natural scaling
-                            val chartMaxValue = if (currentPeriod == "Weekly") {
-                                maxValue
-                            } else {
-                                val maxDataValue = data.maxOrNull() ?: 1f
-                                maxOf(maxDataValue, 1f) // Ensure minimum scale
-                            }
+                            // Use the same maxValue for both Weekly and Yearly to maintain consistent scaling
+                            val chartMaxValue = maxValue
                             val chartHeight = 184f // Available height for bars (200dp - 16dp padding)
                             
                             val displayData = if (currentPeriod == "Weekly") {
@@ -927,7 +920,10 @@ private fun SandowScoreChart(
                                         }
                                         index == currentDayIndex
                                     } else {
-                                        index == 7 // August (current month)
+                                        // Calculate current month index (0-based: Jan=0, Feb=1, ..., Dec=11)
+                                        val bangladeshCalendar = java.util.Calendar.getInstance(TimeUtils.getBangladeshTimeZone())
+                                        val currentMonth = bangladeshCalendar.get(java.util.Calendar.MONTH) // 0-based month
+                                        index == currentMonth
                                     }
                                     
                                     // Calculate bar height based on ratio to maxValue
@@ -935,21 +931,32 @@ private fun SandowScoreChart(
                                     val barHeight = (barHeightRatio * chartHeight).dp
                                     val barColor = if (isHighlighted) Color.Black else Color.LightGray
                                     
-                                    // Value label on highlighted bar
-                                    if (isHighlighted && value > 0) {
+                                    // Value label on highlighted bar (show for current day/month even if value is 0)
+                                    if (isHighlighted) {
                                         val valueString = value.toInt().toString()
                                         val textLength = valueString.length
                                         
-                                        // More aggressive width calculation for larger numbers
-                                        val dynamicWidth = when {
-                                            textLength <= 2 -> 32.dp
-                                            textLength == 3 -> 40.dp
-                                            textLength == 4 -> 48.dp
-                                            textLength == 5 -> 56.dp
-                                            else -> (textLength * 12).dp
+                                        // More generous width calculation for yearly charts to prevent truncation
+                                        val dynamicWidth = if (currentPeriod == "Weekly") {
+                                            when {
+                                                textLength <= 2 -> 32.dp
+                                                textLength == 3 -> 40.dp
+                                                textLength == 4 -> 48.dp
+                                                textLength == 5 -> 56.dp
+                                                else -> (textLength * 12).dp
+                                            }
+                                        } else {
+                                            // Yearly charts need more width to prevent truncation
+                                            when {
+                                                textLength <= 2 -> 40.dp
+                                                textLength == 3 -> 52.dp
+                                                textLength == 4 -> 64.dp
+                                                textLength == 5 -> 76.dp
+                                                else -> (textLength * 16).dp
+                                            }
                                         }
                                         
-                                        // More aggressive font size reduction for larger numbers
+                                        // Font size adjustment
                                         val dynamicFontSize = when {
                                             textLength <= 2 -> 12.sp
                                             textLength == 3 -> 10.sp
@@ -973,7 +980,12 @@ private fun SandowScoreChart(
                                                 style = MaterialTheme.typography.bodySmall,
                                                 fontSize = dynamicFontSize,
                                                 modifier = Modifier.padding(
-                                                    horizontal = maxOf(3.dp, (textLength * 1.5).dp),
+                                                    horizontal = if (currentPeriod == "Weekly") {
+                                                        maxOf(3.dp, (textLength * 1.5).dp)
+                                                    } else {
+                                                        // More padding for yearly charts
+                                                        maxOf(4.dp, (textLength * 2).dp)
+                                                    },
                                                     vertical = 3.dp
                                                 ),
                                                 textAlign = TextAlign.Center,
@@ -1166,9 +1178,6 @@ private fun generateWeeklyData(
     
     // Debug logging
     val chartDayLabels = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
-    android.util.Log.d("WeeklyData", "Current day: ${chartDayLabels[chartCurrentDayIndex]}, chart index: $chartCurrentDayIndex")
-    android.util.Log.d("WeeklyData", "Generated ${reorderedData.size} days of data (reordered for Mon-Sun chart)")
-    android.util.Log.d("WeeklyData", "Reordered weekly calories data: ${reorderedData.map { it.caloriesBurned }}")
     
     return reorderedData
 }
@@ -1344,11 +1353,7 @@ private fun generateWeeklyStepsData(
         else -> 0
     }
     
-    // Debug logging
     val chartDayLabels = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
-    android.util.Log.d("WeeklyStepsData", "Current day: ${chartDayLabels[chartCurrentDayIndex]}, chart index: $chartCurrentDayIndex")
-    android.util.Log.d("WeeklyStepsData", "Generated ${reorderedData.size} days of step data (reordered for Mon-Sun chart)")
-    android.util.Log.d("WeeklyStepsData", "Reordered weekly steps data: ${reorderedData.map { it.steps }}")
     
     return reorderedData
 }
