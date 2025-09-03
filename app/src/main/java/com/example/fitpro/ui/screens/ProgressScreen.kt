@@ -1095,6 +1095,14 @@ private fun generateWeeklyData(
         val dayWorkoutDuration = workoutsByDate[dayDate]
             ?.sumOf { it.actualDuration } ?: 0
         
+        // Debug logging for workout duration
+        if (dayWorkoutDuration > 0) {
+            android.util.Log.d("WorkoutData", "Day $dayDate: Found ${dayWorkouts} workouts, total duration: ${dayWorkoutDuration} minutes")
+            workoutsByDate[dayDate]?.forEach { workout ->
+                android.util.Log.d("WorkoutData", "  - Workout: ${workout.workoutType}, duration: ${workout.duration}, actualDuration: ${workout.actualDuration}")
+            }
+        }
+        
         // Calculate calories burned from workouts for this day
         val dayCaloriesBurned = workoutsByDate[dayDate]
             ?.sumOf { (it.targetCalories ?: 0).toLong() } ?: 0L

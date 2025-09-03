@@ -117,6 +117,6 @@ object WorkoutTimerManager {
     fun getActualDurationMinutes(workoutId: Int): Int {
         val timer = _activeTimers.value[workoutId] ?: return 0
         val elapsedSeconds = timer.totalDuration - timer.remainingTime
-        return (elapsedSeconds / 60).coerceAtLeast(1) // At least 1 minute
+        return (elapsedSeconds / 60) // Return actual minutes, not minimum 1
     }
 }

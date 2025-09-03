@@ -894,6 +894,8 @@ private fun WelcomeSection(
                                         workout.duration
                                     }
 
+                                    android.util.Log.d("WorkoutCompletion", "Completing workout: ${workout.type}, original duration: ${workout.duration}, actual duration: ${actualDuration}, timer active: $isTimerActive")
+
                                     val completedWorkout = CompletedWorkout(
                                         userEmail = userEmail,
                                         workoutType = workout.type,
@@ -1537,7 +1539,7 @@ private fun WelcomeSection(
                 )
                 Spacer(modifier = Modifier.height(4.dp))
 
-                // Show "Done" when target is achieved, otherwise show current steps
+                // Show "Done" when target is achieved, otherwise show current steps or 0 if no target
                 if (isTargetCompleted && steps >= stepTarget) {
                     Text(
                         text = "Done",
@@ -1547,7 +1549,7 @@ private fun WelcomeSection(
                     )
                 } else {
                     Text(
-                        text = "$steps",
+                        text = if (hasTarget) "$steps" else "0",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
